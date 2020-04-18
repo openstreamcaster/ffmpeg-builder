@@ -8,6 +8,16 @@ from zipfile import ZipFile
 
 from plumbum import local, RETCODE, BG, FG, TEE, CommandNotFound
 
+
+def add_bool_arg(parser, feature, onexplain, name, offexplain, antiname=None, default=False, required=False):
+    if antiname is None:
+        antiname = "no-" + name
+    group = parser.add_mutually_exclusive_group(required=required)
+    group.add_argument('--' + name, dest=feature, action='store_true', help=onexplain)
+    group.add_argument('--' + antiname, dest=feature, action='store_false', help=offexplain)
+    parser.set_defaults(**{feature:default}) #parser.set_defaults(**{name: default})
+
+
 # Parse args
 parser = argparse.ArgumentParser(description='Build a special edition of FFMPEG.')
 parser.add_argument('--jobs', metavar='j', action="store", dest="jobs", type=int, help='number of parallel jobs')
@@ -17,7 +27,9 @@ parser.add_argument('--silent', action="store_true", dest="silent_mode", help='r
 parser.add_argument('--targets', action="store", dest="targets",
                     help='comma-separated targets for building (empty = build all)')
 parser.add_argument('--exclude-targets', action="store", dest="exclude_targets", help='don\'t build these')
-parser.add_argument('--slavery', action="store_false", dest="slavery_mode", help='non-free components')
+add_bool_arg(parser, "slavery_mode", "use non-free components", "slavery",
+                                     "use free components",  "freedom",
+                                     True, False)
 
 args = parser.parse_args()
 
@@ -136,13 +148,16 @@ def print_block(*strings):
     print_lines(*to_print)
     print("")
 
+
 def print_p(*strings):
     to_print = strings
     print_lines(*to_print)
     print("")
 
+
 def fail():
     sys.exit(1)
+
 
 # Please note that neat features of Plumbum like FG, BG and TEE are not working on Windows.
 # Especially TEE that runs `select` against new processes.
@@ -165,6 +180,7 @@ def fg(a, *cmds):
         print(f"Failed to execute in foreground")
         print(e)
         return False
+
 
 def sfg(a, *cmds):
     try:
@@ -297,6 +313,7 @@ def download(url, dest_name, alter_name=None, archive_format=ARCHIVE_FORMAT_TAR)
             myzip.extractall(download_path)
     else:
         raise Exception
+
 
 def build_lock_file_name(target):
     return pj(TARGET_DIR, f"{target}.ok")
@@ -485,7 +502,6 @@ def build_all():
             mark_as_built("libvpx")
 
     if need_building("lame"):
-
         # First attempt was to use lame-3.100:
         # http://kent.dl.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz
         # But old version 3.100 breaks Windows compatibility when using libiconv
@@ -685,7 +701,7 @@ def build_all():
                 # Making done.
                 # Installing...
                 # INCLUDE_PATH, LIBRARY_PATH, and BINARY_PATH must be specified
-                #make: *** [win32/Makefile.gcc:128: install] Error 1
+                # make: *** [win32/Makefile.gcc:128: install] Error 1
 
                 with local.env(INCLUDE_PATH=f"{RELEASE_DIR}/include",
                                LIBRARY_PATH=f"{RELEASE_DIR}/lib",
