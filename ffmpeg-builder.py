@@ -15,7 +15,7 @@ def add_bool_arg(parser, feature, onexplain, name, offexplain, antiname=None, de
     group = parser.add_mutually_exclusive_group(required=required)
     group.add_argument('--' + name, dest=feature, action='store_true', help=onexplain)
     group.add_argument('--' + antiname, dest=feature, action='store_false', help=offexplain)
-    parser.set_defaults(**{feature:default}) #parser.set_defaults(**{name: default})
+    parser.set_defaults(**{feature: default})  # parser.set_defaults(**{name: default})
 
 
 # Parse args
@@ -28,15 +28,15 @@ parser.add_argument('--targets', action="store", dest="targets",
                     help='comma-separated targets for building (empty = build all)')
 parser.add_argument('--exclude-targets', action="store", dest="exclude_targets", help='don\'t build these')
 add_bool_arg(parser, "slavery_mode", "use non-free components", "slavery",
-                                     "use free components",  "freedom",
-                                     True, False)
+             "use free components", "freedom",
+             True, False)
 
 args = parser.parse_args()
 
 # Set up targets
 TARGETS_DEFAULT = ["yasm", "nasm", "opencore", "libvpx", "lame", "opus", "xvidcore", "x264", "libogg",
                    "libvorbis", "libtheora", "pkg-config", "cmake", "vid_stab", "x265", "fdk_aac", "av1",
-                   "zlib", "openssl", "ffmpeg", "ffmpeg-msys2-deps"]
+                   "zlib", "openssl", "sdl", "ffmpeg", "ffmpeg-msys2-deps"]
 TARGETS = TARGETS_DEFAULT
 if args.targets is not None:
     TARGETS = args.targets.split(",")
@@ -731,6 +731,16 @@ def build_all():
             install()
             mark_as_built("openssl")
 
+    if need_building("sdl"):
+        download(
+            "https://www.libsdl.org/release/SDL2-2.0.12.tar.gz",
+            "SDL2-2.0.12.tar.gz")
+        with target_cwd("SDL2-2.0.12"):
+            configure(RELEASE_DIR, "--disable-shared", "--enable-static")
+            make()
+            install()
+            mark_as_built("sdl")
+
     if need_building("ffmpeg"):
         download("https://git.ffmpeg.org/gitweb/ffmpeg.git/snapshot/8e30502abe62f741cfef1e7b75048ae86a99a50f.tar.gz",
                  "ffmpeg-snapshot.tar.bz2")
@@ -749,7 +759,7 @@ def build_all():
                     "--enable-static",
                     "--disable-debug",
                     "--disable-shared",
-                    "--disable-ffplay",
+                    "--enable-ffplay",
                     "--disable-doc",
                     "--enable-gpl",
                     "--enable-version3",
