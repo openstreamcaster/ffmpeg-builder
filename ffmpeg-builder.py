@@ -498,6 +498,7 @@ def build_all():
                  "lame-master.zip", alter_name=None, archive_format=ARCHIVE_FORMAT_ZIP)
         with target_cwd("lame-master"):
             configure(RELEASE_DIR, "--disable-shared", "--enable-static")
+            fg("chmod", "+x", "install-sh")
             make()
             install()
             mark_as_built("lame")
