@@ -17,6 +17,8 @@ parser.add_argument('--silent', action="store_true", dest="silent_mode", help='r
 parser.add_argument('--targets', action="store", dest="targets",
                     help='comma-separated targets for building (empty = build all)')
 parser.add_argument('--exclude-targets', action="store", dest="exclude_targets", help='don\'t build these')
+parser.add_argument('--slavery', action="store_false", dest="slavery_mode", help='non-free components')
+
 args = parser.parse_args()
 
 # Set up targets
@@ -134,6 +136,10 @@ def print_block(*strings):
     print_lines(*to_print)
     print("")
 
+def print_p(*strings):
+    to_print = strings
+    print_lines(*to_print)
+    print("")
 
 def fail():
     sys.exit(1)
@@ -729,14 +735,8 @@ def build_all():
                     "--disable-shared",
                     "--disable-ffplay",
                     "--disable-doc",
-                    # Non-free unfortunately
-                    # Should be replaced with gnutls
-                    # http://www.iiwnz.com/compile-ffmpeg-with-rtmps-for-facebook/
-                    # "--enable-openssl",
-                    # "--enable-gnutls",
                     "--enable-gpl",
                     "--enable-version3",
-                    # "--enable-nonfree",
                     "--enable-libvpx",
                     "--enable-libmp3lame",
                     "--enable-libopus",
@@ -745,15 +745,30 @@ def build_all():
                     "--enable-libx264",
                     "--enable-libx265",
                     "--enable-runtime-cpudetect",
-                    # libfdk_aac is incompatible with the gpl and --enable-nonfree is not specified.
-                    # https://trac.ffmpeg.org/wiki/Encode/AAC
-                    #"--enable-libfdk-aac",
                     "--enable-avfilter",
                     "--enable-libopencore_amrwb",
                     "--enable-libopencore_amrnb",
                     "--enable-filters",
                     "--enable-libvidstab",
                     "--enable-libaom")
+
+            if not args.slavery_mode:
+                print("Applying free replacements for non-free components")
+                opts = opts + ("--enable-gnutls",)
+
+            if args.slavery_mode:
+                print_p("You are applying dirty non-free attachments. Are you sure you need this?",
+                        "Now you can't distribute this FFmpeg build to anyone, so it's almost useless in real products.",
+                        "You can't sell or give away these files. Consider using --slavery=false")
+                opts = opts + (
+                    "--enable-nonfree",
+                    # Non-free unfortunately
+                    # Should be replaced with gnutls
+                    # http://www.iiwnz.com/compile-ffmpeg-with-rtmps-for-facebook/
+                    "--enable-openssl",
+                    # libfdk_aac is incompatible with the gpl and --enable-nonfree is not specified.
+                    # https://trac.ffmpeg.org/wiki/Encode/AAC
+                    "--enable-libfdk-aac",)
 
             # Unfortunately even creators of MSYS2 can't build it with --enable-pthreads :(
             # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-ffmpeg/PKGBUILD
@@ -777,6 +792,8 @@ def build_all():
     print_block(f"Finished: {cpp(RELEASE_DIR)}/bin/ffmpeg",
                 f"You can check correctness of this build by running: "
                 f"{cpp(RELEASE_DIR)}/bin/ffmpeg -version",
+                f"Study the protocols list carefully (e.g, look for rtmps): "
+                f"{cpp(RELEASE_DIR)}/bin/ffmpeg -protocols",
                 f"Enable it temporary in the command line by running: "
                 f"export PATH={cpp(RELEASE_DIR)}/bin:$PATH")
     print_block("And finally. Don't trust the build. Anything in the script output may be a lie.",
@@ -785,6 +802,11 @@ def build_all():
 
 
 def main():
+    if args.slavery_mode:
+        print_block("Hello, slave, how are you?")
+    else:
+        print_block("Building FFmpeg, free as in freedom!")
+
     print_header("Processing targets:")
     print_block(f"{TARGETS}")
 
@@ -793,6 +815,8 @@ def main():
 
     if args.build_mode:
         build_all()
+
+    print("OpenStreamCaster's FFmpeg-builder finished its work. And you?")
 
 
 main()
