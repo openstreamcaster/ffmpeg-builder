@@ -2,7 +2,9 @@
 
 Build FFmpeg from scratch with Python!
 
-We already have a bunch of scripts like this. This work is inspired by [ffmpeg-build-script](https://github.com/markus-perl/ffmpeg-build-script/blob/master/build-ffmpeg): Markus did a great job on gathering requirements for multiple components. But I can't use it because of Bash. Bash is a real shit: fragile syntax, no debug, no IDE, no error reporting, nothing. Therefore, it's time to build something similar with a real programming language.
+We already have a bunch of scripts like this. This work is inspired by [ffmpeg-build-script](https://github.com/markus-perl/ffmpeg-build-script/blob/master/build-ffmpeg): Markus did a great job on gathering requirements for multiple components. But I can't use it because of Bash. Bash is a real shit: fragile syntax, no debug, no IDE, no error reporting, nothing. Therefore, it's time to build something similar with a real programming language. So who's your daddy now? :3
+
+![](https://media1.giphy.com/media/1zhaZh6c3Nz8EVloEV/giphy.gif?cid=ecf05e47912d291200f43284c8d79f1c18b59aaa84f99101&rid=giphy.gif)
 
 ## Usage
 
