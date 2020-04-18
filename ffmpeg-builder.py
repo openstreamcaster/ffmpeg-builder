@@ -1,8 +1,11 @@
+import re
 import sys
 import time
 import os
 import argparse
 import pathlib
+from zipfile import ZipFile
+
 from plumbum import local, RETCODE, BG, FG, TEE, CommandNotFound
 
 # Parse args
@@ -10,6 +13,7 @@ parser = argparse.ArgumentParser(description='Build a special edition of FFMPEG.
 parser.add_argument('--jobs', metavar='j', action="store", dest="jobs", type=int, help='number of parallel jobs')
 parser.add_argument('--build', action="store_true", dest="build_mode", help='build solution')
 parser.add_argument('--clean', action="store_true", dest="clean_mode", help='clean solution')
+parser.add_argument('--silent', action="store_true", dest="silent_mode", help='removes most spam')
 parser.add_argument('--targets', action="store", dest="targets",
                     help='comma-separated targets for building (empty = build all)')
 parser.add_argument('--exclude-targets', action="store", dest="exclude_targets", help='don\'t build these')
@@ -30,6 +34,8 @@ if args.exclude_targets is not None:
 fex = os.path.exists
 pj = os.path.join
 
+SHELL = 'bash'
+
 # Set up output directories
 CWD = local.cwd
 TARGET_DIR = pj(CWD, "targets")
@@ -42,21 +48,64 @@ CC = local["clang"]
 LDFLAGS = f"-L{RELEASE_DIR}/lib -lm"
 CFLAGS = f"-I{RELEASE_DIR}/include"
 FFMPEG_CONFIGURE_EXTENDED_OPTIONS = tuple()
-JOBS_DEFAULT = 2
+JOBS_DEFAULT = 8
 JOBS = JOBS_DEFAULT
 
 # Set up operating system
-OS_TYPE = local['uname']()
 OS_TYPE_LINUX = "Linux"
 OS_TYPE_MAC = "Darwin"
+OS_TYPE_WINDOWS = "Windows"
+# mad skills: https://stackoverflow.com/questions/1325581/how-do-i-check-if-im-running-on-windows-in-python
+OS_TYPE = OS_TYPE_WINDOWS if hasattr(sys, 'getwindowsversion') else local['uname']()
 
 # Set up constants
 DOWNLOAD_RETRY_DELAY = 3
 DOWNLOAD_RETRY_ATTEMPTS = 3
 
+ARCHIVE_FORMAT_TAR = "TAR"
+ARCHIVE_FORMAT_ZIP = "ZIP"
+
 # Pseudographics
 bold_separator = "======================================="
 italic_separator = "---------------------------------------"
+
+
+def cross_platform_path(src):
+    if OS_TYPE != OS_TYPE_WINDOWS:
+        return src
+
+    # The following code is the poor's man implementation of this:
+    # https://stackoverflow.com/questions/41492504/how-to-get-native-windows-path-inside-msys-python
+    # It's working, but maybe we should consider to switch to the full version
+
+    # Handle Windows (native path)
+    path_search = re.search('([a-zA-Z]):/(.*)', src, re.IGNORECASE)
+    if path_search:
+        drive = path_search.group(1).lower()
+        path = path_search.group(2)
+        result = f"/{drive}/{path}"
+        return result
+    # Handle Windows (native path with backward slashes)
+    # Actually we can skip this, but it's useful for validation
+    path_search = re.search('([a-zA-Z]):\\\(.*)', src, re.IGNORECASE)
+    if path_search:
+        drive = path_search.group(1).lower()
+        path = path_search.group(2).replace('\\', '/')
+        result = f"/{drive}/{path}"
+        return result
+    # Handle Windows (MSYS2, Git Bash, Cygwin, etc)
+    simulated_path_search = re.search('/([a-zA-Z])/(.*)', src, re.IGNORECASE)
+    if simulated_path_search:
+        drive = simulated_path_search.group(1).lower()
+        path = simulated_path_search.group(2)
+        result = f"/{drive}/{path}"
+        return result
+    # No sense in continuing without properly parsed path
+    raise NotImplementedError
+
+
+# Clever alias
+cpp = cross_platform_path
 
 
 def lookahead(iterable):
@@ -89,26 +138,47 @@ def print_block(*strings):
 def fail():
     sys.exit(1)
 
+# Please note that neat features of Plumbum like FG, BG and TEE are not working on Windows.
+# Especially TEE that runs `select` against new processes.
+# Therefore, now we have no meaningful debug output whatsoever.
+# It's a huge problem, but I know no quick fixes, and Windows is too important now.
+# https://github.com/tomerfiliba/plumbum/issues/170
+#
+# A temporary solution:
+# Plumbum provides enough information for a very basic log-driven debugging though.
+# For a deep understanding of underlying errors you have to hack this script by yourself to add some reporting.
 
 def fg(a, *cmds):
-    fg_return = local[a][cmds] & TEE(retcode=None)
-    fg_return_code = fg_return[0]
-    if fg_return_code != 0:
-        print(f"Failed to execute in foreground, error code: {fg_return_code}")
-        return False
-    else:
+    try:
+        if args.silent_mode:
+            (local[a][cmds])()
+        else:
+            local[a][cmds] & FG
         return True
+    except Exception as e:
+        print(f"Failed to execute in foreground")
+        print(e)
+        return False
+
+def sfg(a, *cmds):
+    try:
+        (local[a][cmds])()
+        return True
+    except Exception as e:
+        print(f"Failed to execute in silent foreground")
+        print(e)
+        return False
 
 
 def bg(a, *commands):
-    result = local[a][commands] & BG(retcode=None)
-    result.wait()
-    bg_return_code = result.returncode
-    if bg_return_code != 0:
-        print(f"Failed to execute in background, error code: {bg_return_code}")
-        return False
-    else:
+    try:
+        cmd = local[a]
+        p = cmd.popen(*commands)
+        p.communicate()
         return True
+    except:
+        print(f"Failed to execute in background")
+        return False
 
 
 def bg_content(a, *cmds):
@@ -175,15 +245,16 @@ def rm(*file_name_parts):
 
 
 def curl(src, dest):
-    result = local["curl"]["-L", "--silent", "-o", dest, src] & TEE(retcode=None)
-    return result[0]
+    # It's a miracle, but crul on MSYS2 use plain paths instead of shielding it with cpp(dest).
+    # Trying to shield it will raise an error
+    return fg("curl", "-L", "--silent", "-o", dest, src)
 
 
 def untar(src, dest):
-    return bg("tar", "-xvf", src, "-C", dest)
+    return sfg("tar", "-xvf", cpp(src), "-C", cpp(dest))
 
 
-def download(url, dest_name, alter_name=None):
+def download(url, dest_name, alter_name=None, archive_format=ARCHIVE_FORMAT_TAR):
     download_path = TARGET_DIR
 
     if alter_name is not None:
@@ -196,9 +267,8 @@ def download(url, dest_name, alter_name=None):
 
         successful_download = False
         for x in range(DOWNLOAD_RETRY_ATTEMPTS):
-            curl_return_code = curl(url, base_path)
-            if 0 != curl_return_code:
-                print(f"Downloading failed: {curl_return_code}, {url}. Retrying in {DOWNLOAD_RETRY_DELAY} seconds")
+            if curl(url, base_path) is not True:
+                print(f"Downloading failed: {url}. Retrying in {DOWNLOAD_RETRY_DELAY} seconds")
                 time.sleep(DOWNLOAD_RETRY_DELAY)
             else:
                 successful_download = True
@@ -210,12 +280,17 @@ def download(url, dest_name, alter_name=None):
         else:
             print(f"Successfuly downloaded: {url}")
     else:
-        print(f"Downloaded from local cache: {url}")
+        print(f"Used from local cache: {url}")
 
-    if not untar(base_path, download_path):
-        print(f"Failed to extract {dest_name}")
-        fail()
-
+    if archive_format == ARCHIVE_FORMAT_TAR:
+        if not untar(base_path, download_path):
+            print(f"Failed to extract {dest_name}")
+            fail()
+    elif archive_format == ARCHIVE_FORMAT_ZIP:
+        with ZipFile(base_path) as myzip:
+            myzip.extractall(download_path)
+    else:
+        raise Exception
 
 def build_lock_file_name(target):
     return pj(TARGET_DIR, f"{target}.ok")
@@ -283,41 +358,82 @@ def set_jobs_num():
     if args.jobs is not None:
         JOBS = args.jobs
     elif fex("/proc/cpuinfo"):
+        # Linux
         rslt = bg_content("grep", "-c", "processor", "/proc/cpuinfo")
         JOBS = rslt.stdout.rstrip()
     elif OS_TYPE == OS_TYPE_MAC:
+        # Mac
         rslt = bg_content("sysctl", "-n", "machdep.cpu.thread_count")
         JOBS = rslt.stdout.rstrip()
         FFMPEG_CONFIGURE_EXTENDED_OPTIONS = ("--enable-videotoolbox",)
     else:
+        # TODO: Windows
         JOBS = JOBS_DEFAULT
 
 
 def configure(prefix, *opts):
-    new_opts = (f"--prefix={prefix}",) + opts
+    new_opts = ("./configure", f"--prefix={cpp(prefix)}",) + opts
+    if OS_TYPE_WINDOWS == OS_TYPE:
+        new_opts = ("bash",) + new_opts
+    fg("chmod", "+x", "./configure")
     print(f"Configure with flags: {new_opts}")
-    if not fg("./configure", new_opts):
+    if not fg(*new_opts):
         fail()
+    print("Configuring done.")
 
 
-def make():
-    if not fg("make", "-j", JOBS):
+def make(*opts):
+    print(f"Making...")
+    if not fg("make", "-j", JOBS, *opts):
         fail()
+    print(f"Making done.")
+
 
 def cmake(*opts):
+    print(f"Making with CMake...")
+    # MSYS2 with MinGW toolchain
+    if OS_TYPE_WINDOWS == OS_TYPE:
+        opts = ("-G", "MSYS Makefiles",) + opts
+
+    # For POSIX filenames, use 'msys/cmake'.
+    # For Windows paths,  mingw64/mingw-w64-x86_64-cmake'
+    # Our self-build bundled version of cmake obviously is build with mingw, so we have to use Windows paths here
+    # Failing to do so produces incorrect post-installation code in the cmake_install.cmake:
+    # ```
+    #    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES
+    #    "C:/temp/ffmpeg-builder/targets/x265_3.2.1/source/x265.pc")
+    # ```
+    # Which is triggered by something like this in CMakeLists.txt:
+    # ```
+    #    configure_file("x265.pc.in" "x265.pc" @ONLY)
+    #    install(FILES       "${CMAKE_CURRENT_BINARY_DIR}/x265.pc"
+    #    DESTINATION "${LIB_INSTALL_DIR}/pkgconfig")
+    # '''
+    # Don't forget that you can search on Windows without grep -r, using
+    # something like " dir -Recurse | Select-String -pattern 'x265.pc'" in Power Shell to find errors like this.
+    #
+    # Discussion: https://cmake.org/pipermail/cmake/2018-February/067058.html
+    # Conversions between paths:
+    # https://stackoverflow.com/questions/41492504/how-to-get-native-windows-path-inside-msys-python
+    # TODO: implement command line option to switch between versions of CMake, protect with cpp(RELEASE_DIR)
+
     if not fg("cmake", f"-DCMAKE_INSTALL_PREFIX:PATH={RELEASE_DIR}", *opts):
         fail()
+    print(f"Making with CMake done.")
 
-def install():
-    if not fg("make", "install"):
+
+def install(*opts):
+    print("Installing...")
+    if not fg("make", "install", *opts):
         fail()
+    print("Installation done.")
 
 
 def build_all():
     print_header("Building process started")
     mkdirs(TARGET_DIR, RELEASE_DIR)
     push_path(RELEASE_BIN_DIR)
-    require_commands("make", "g++", "curl")
+    require_commands("make", "g++", "curl", "tar")
     set_jobs_num()
 
     if need_building("yasm"):
@@ -363,9 +479,20 @@ def build_all():
             mark_as_built("libvpx")
 
     if need_building("lame"):
-        download("http://kent.dl.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz",
-                 "lame-3.100.tar.gz")
-        with target_cwd("lame-3.100"):
+
+        # First attempt was to use lame-3.100:
+        # http://kent.dl.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz
+        # But old version 3.100 breaks Windows compatibility when using libiconv
+        # since frontend/parse.c now depends on langinfo.h.
+        # https://github.com/bincrafters/community/issues/480
+        # Therefore we have no option but to use the latest snapshot from SVN:
+        # https://sourceforge.net/p/lame/svn/HEAD/tarball
+        # Unfortunately, aI don't know how to get this URL without , and that's a shame.
+        # TODO: find a way to detect this URL automatically
+
+        download("https://sourceforge.net/code-snapshots/svn/l/la/lame/svn/lame-svn-r6449-trunk.zip",
+                 "lame-svn-r6449-trunk.zip", alter_name=None, archive_format=ARCHIVE_FORMAT_ZIP)
+        with target_cwd("lame-svn-r6449-trunk", "lame"):
             configure(RELEASE_DIR, "--disable-shared", "--enable-static")
             make()
             install()
@@ -375,8 +502,31 @@ def build_all():
         download("https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz",
                  "opus-1.3.1.tar.gz")
         with target_cwd("opus-1.3.1"):
+
+            # On Windows, there's a huge problem.
+            # "Unlike glibc, mingw-w64 does not provide fortified functions at all...
+            # "... actually it does now, but its broken as hell :S"
+            #
+            # MinGW: https://github.com/msys2/MINGW-packages/issues/5803
+            # Opus: https://github.com/bincrafters/community/issues/1077
+            #
+            # Solution:
+            # Fortification requires -lssp (or -fstack-protector which adds -lssp implicitly) to work.
+
+            old_ldflags = local.env.get("LDFLAGS")
+            if OS_TYPE == OS_TYPE_WINDOWS:
+                if old_ldflags is not None:
+                    local.env["LDFLAGS"] = f"{old_ldflags} -fstack-protector"
+                else:
+                    local.env["LDFLAGS"] = " -fstack-protector"
+
             configure(RELEASE_DIR, "--disable-shared", "--enable-static")
             make()
+
+            # Restore old LDFLAGS after all that dark magic
+            if (OS_TYPE == OS_TYPE_WINDOWS) and (old_ldflags is not None):
+                local.env["LDFLAGS"] = old_ldflags
+
             install()
             mark_as_built("opus")
 
@@ -418,8 +568,8 @@ def build_all():
                  "libvorbis-1.3.6.tar.gz")
         with target_cwd("libvorbis-1.3.6"):
             configure(RELEASE_DIR, "--disable-shared", "--enable-static", "--disable-oggtest",
-                      f"--with-ogg-libraries={RELEASE_DIR}/lib",
-                      f"--with-ogg-includes={RELEASE_DIR}/include")
+                      f"--with-ogg-libraries={cpp(RELEASE_DIR)}/lib",
+                      f"--with-ogg-includes={cpp(RELEASE_DIR)}/include")
             make()
             install()
             mark_as_built("libvorbis")
@@ -428,9 +578,12 @@ def build_all():
         download("http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.gz",
                  "libtheora-1.1.1.tar.bz")
         with target_cwd("libtheora-1.1.1"):
-            ((local["sed"]["s/-fforce-addr//g", "configure"]) > "configure.patched")()
-            (local["chmod"]["+x", "configure.patched"])()
-            (local["mv"]["configure.patched", "configure"])()
+            print("Removing --fforce-adr from configure")
+            ((local["sed"]["s/-fforce-addr//g", "configure"]) > "configure.patched") & FG
+            fg("chmod", "+x", "configure.patched")
+            fg("mv", "configure.patched", "configure")
+            print("Configure processing done.")
+            # Always make sure, that you run "./configure" instead of "bash ./configure". Multiple weird errors.
             configure(RELEASE_DIR, "--disable-shared", "--enable-static",
                       "--disable-oggtest", "--disable-vorbistest", "--disable-examples", "--disable-asm",
                       "--disable-spec",
@@ -457,7 +610,8 @@ def build_all():
                  "cmake-3.15.4.tar.gz")
         with target_cwd("cmake-3.15.4"):
             rm("Modules", "FindJava.cmake")
-            (local["perl"]["-p", "-i", "-e", "s/get_filename_component.JNIPATH/#get_filename_component(JNIPATH/g","Tests/CMakeLists.txt"])()
+            (local["perl"][
+                "-p", "-i", "-e", "s/get_filename_component.JNIPATH/#get_filename_component(JNIPATH/g", "Tests/CMakeLists.txt"])()
             configure(RELEASE_DIR)
             make()
             install()
@@ -479,13 +633,15 @@ def build_all():
             cmake("-DENABLE_SHARED:bool=off", ".")
             make()
             install()
-            ((local["sed"]["s/-lx265/-lx265 -lstdc++/g", f"{RELEASE_DIR}/lib/pkgconfig/x265.pc"]) > f"{RELEASE_DIR}/lib/pkgconfig/x265.pc.tmp")()
-            fg("mv", f"{RELEASE_DIR}/lib/pkgconfig/x265.pc.tmp", f"{RELEASE_DIR}/lib/pkgconfig/x265.pc")
+            ((local["sed"][
+                "s/-lx265/-lx265 -lstdc++/g", f"{cpp(RELEASE_DIR)}/lib/pkgconfig/x265.pc"]) > f"{cpp(RELEASE_DIR)}/lib/pkgconfig/x265.pc.tmp")()
+            fg("mv", f"{cpp(RELEASE_DIR)}/lib/pkgconfig/x265.pc.tmp", f"{cpp(RELEASE_DIR)}/lib/pkgconfig/x265.pc")
             mark_as_built("x265")
 
     if need_building("fdk_aac"):
-        download("https://sourceforge.net/projects/opencore-amr/files/fdk-aac/fdk-aac-2.0.0.tar.gz/download?use_mirror=gigenet",
-                 "fdk-aac-2.0.0.tar.gz")
+        download(
+            "https://sourceforge.net/projects/opencore-amr/files/fdk-aac/fdk-aac-2.0.0.tar.gz/download?use_mirror=gigenet",
+            "fdk-aac-2.0.0.tar.gz")
         with target_cwd("fdk-aac-2.0.0"):
             configure(RELEASE_DIR, "--disable-shared", "--enable-static")
             make()
@@ -497,6 +653,7 @@ def build_all():
                  "av1.tar.gz", "av1")
         mkdir(TARGET_DIR, "aom_build")
         with target_cwd("aom_build"):
+            # TODO: Don't forget about different kinds of cmake (msys/cmake and mingw/cmake)
             cmake("-DENABLE_TESTS=0", f"{TARGET_DIR}/av1")
             make()
             install()
@@ -506,20 +663,40 @@ def build_all():
         download("https://www.zlib.net/zlib-1.2.11.tar.gz",
                  "zlib-1.2.11.tar.gz")
         with target_cwd("zlib-1.2.11"):
-            configure(RELEASE_DIR)
-            make()
-            install()
+            if OS_TYPE == OS_TYPE_WINDOWS:
+                # Problem 1:
+                # Please note that
+                # Checking for gcc...
+                # Please use win32/Makefile.gcc instead.
+                # ** ./configure aborting.
+                #
+                # Problem 2:
+                # Making done.
+                # Installing...
+                # INCLUDE_PATH, LIBRARY_PATH, and BINARY_PATH must be specified
+                #make: *** [win32/Makefile.gcc:128: install] Error 1
+
+                with local.env(INCLUDE_PATH=f"{RELEASE_DIR}/include",
+                               LIBRARY_PATH=f"{RELEASE_DIR}/lib",
+                               BINARY_PATH=f"{RELEASE_DIR}/bin"):
+                    make("-f", f"./win32/Makefile.gcc")
+                    install("-f", f"./win32/Makefile.gcc")
+            else:
+                configure(RELEASE_DIR)
+                make()
+                install()
             mark_as_built("zlib")
 
     if need_building("openssl"):
         download("https://www.openssl.org/source/openssl-1.1.1d.tar.gz",
                  "openssl-1.1.1d.tar.gz")
         with target_cwd("openssl-1.1.1d"):
-            if not fg("./config",
-                      f"--prefix={RELEASE_DIR}",
-                      f"--openssldir={RELEASE_DIR}",
-                      f"--with-zlib-include={RELEASE_DIR}/include/",
-                      f"--with-zlib-lib={RELEASE_DIR}/lib",
+            if not fg("bash",
+                      "./config",
+                      f"--prefix={cpp(RELEASE_DIR)}",
+                      f"--openssldir={cpp(RELEASE_DIR)}",
+                      f"--with-zlib-include={cpp(RELEASE_DIR)}/include/",
+                      f"--with-zlib-lib={cpp(RELEASE_DIR)}/lib",
                       "no-shared",
                       "zlib"):
                 fail()
@@ -531,52 +708,69 @@ def build_all():
         download("https://git.ffmpeg.org/gitweb/ffmpeg.git/snapshot/8e30502abe62f741cfef1e7b75048ae86a99a50f.tar.gz",
                  "ffmpeg-snapshot.tar.bz2")
         with target_cwd("ffmpeg-8e30502"):
-            configure(RELEASE_DIR,
-                      *FFMPEG_CONFIGURE_EXTENDED_OPTIONS,
-                      f"--pkgconfigdir=\"{RELEASE_DIR}/lib/pkgconfig\"",
-                      "--pkg-config-flags=--static",
-                      f"--extra-cflags=-I{RELEASE_DIR}/include",
-                      f"--extra-ldflags=-L{RELEASE_DIR}/lib",
-                      "--extra-libs=-lpthread -lm",
-                      "--enable-static",
-                      "--disable-debug",
-                      "--disable-shared",
-                      "--disable-ffplay",
-                      "--disable-doc",
-                      "--enable-openssl",
-                      "--enable-gpl",
-                      "--enable-version3",
-                      "--enable-nonfree",
-                      "--enable-pthreads",
-                      "--enable-libvpx",
-                      "--enable-libmp3lame",
-                      "--enable-libopus",
-                      "--enable-libtheora",
-                      "--enable-libvorbis",
-                      "--enable-libx264",
-                      "--enable-libx265",
-                      "--enable-runtime-cpudetect",
-                      "--enable-libfdk-aac",
-                      "--enable-avfilter",
-                      "--enable-libopencore_amrwb",
-                      "--enable-libopencore_amrnb",
-                      "--enable-filters",
-                      "--enable-libvidstab",
-                      "--enable-libaom"
-                      )
+            local.env["PKG_CONFIG_PATH"] = f"{cpp(RELEASE_DIR)}/lib/pkgconfig"
+            opts = (RELEASE_DIR,
+                    *FFMPEG_CONFIGURE_EXTENDED_OPTIONS,
+                    # f"--bindirr={cpp(RELEASE_DIR)}/bin"
+                    # f"--libdir={cpp(RELEASE_DIR)}/lib",
+                    f"--pkgconfigdir={cpp(RELEASE_DIR)}/lib/pkgconfig",
+                    "--pkg-config-flags=--static",
+                    f"--extra-cflags=-I{cpp(RELEASE_DIR)}/include",
+                    f"--extra-ldflags=-L{cpp(RELEASE_DIR)}/lib",
+                    f"--extra-ldflags=-fstack-protector",
+                    "--extra-libs=-lm",
+                    "--enable-static",
+                    "--disable-debug",
+                    "--disable-shared",
+                    "--disable-ffplay",
+                    "--disable-doc",
+                    # Non-free unfortunately
+                    # Should be replaced with gnutls
+                    # http://www.iiwnz.com/compile-ffmpeg-with-rtmps-for-facebook/
+                    # "--enable-openssl",
+                    # "--enable-gnutls",
+                    "--enable-gpl",
+                    "--enable-version3",
+                    # "--enable-nonfree",
+                    "--enable-libvpx",
+                    "--enable-libmp3lame",
+                    "--enable-libopus",
+                    "--enable-libtheora",
+                    "--enable-libvorbis",
+                    "--enable-libx264",
+                    "--enable-libx265",
+                    "--enable-runtime-cpudetect",
+                    # libfdk_aac is incompatible with the gpl and --enable-nonfree is not specified.
+                    # https://trac.ffmpeg.org/wiki/Encode/AAC
+                    #"--enable-libfdk-aac",
+                    "--enable-avfilter",
+                    "--enable-libopencore_amrwb",
+                    "--enable-libopencore_amrnb",
+                    "--enable-filters",
+                    "--enable-libvidstab",
+                    "--enable-libaom")
+
+            # Unfortunately even creators of MSYS2 can't build it with --enable-pthreads :(
+            # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-ffmpeg/PKGBUILD
+            if OS_TYPE != OS_TYPE_WINDOWS:
+                opts = opts + ("--extra-libs=-lpthread",)
+                opts = opts + ("--enable-pthreads",)
+
+            configure(*opts)
             make()
             install()
             mark_as_built("ffmpeg")
 
     print_block()
-    print_block(f"Finished: {RELEASE_DIR}/bin/ffmpeg",
+    print_block(f"Finished: {cpp(RELEASE_DIR)}/bin/ffmpeg",
                 f"You can check correctness of this build by running: "
-                f"{RELEASE_DIR}/bin/ffmpeg -version",
+                f"{cpp(RELEASE_DIR)}/bin/ffmpeg -version",
                 f"Enable it temporary in the command line by running: "
-                f"export PATH={RELEASE_DIR}/bin:$PATH")
+                f"export PATH={cpp(RELEASE_DIR)}/bin:$PATH")
     print_block("And finally. Don't trust the build. Anything in the script output may be a lie.",
                 "Always check what you're doing and run test suite.",
                 "If you don't have one, ask for professional help.")
+
 
 def main():
     print_header("Processing targets:")

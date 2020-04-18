@@ -6,19 +6,30 @@ We already have a bunch of scripts like this. This work is inspired by [ffmpeg-b
 
 ## Usage
 
-* Build:`python3 hello.py --build` and follow on-screen instructions
-* Clean:`python3 hello.py --clean`
-* Help:`python3 hello.py --help`
+* Build:`python3 ./ffmpeg-builder.py --build` and follow on-screen instructions
+* Clean:`python3 ./ffmpeg-builder.py --clean`
+* Help:`python3 ./ffmpeg-builder.py --help`
 
 ## Patches
 
 - TODO: Facebook livestreaming
 
-## Requirements
+## Operating systems
 
 - GNU/Linux
 - MacOS
-- TODO: Windows (MSYS2)
+- Windows (MSYS2)
+
+## Windows
+
+Windows is a very unfriendly place. Unfortunately, it's the only place with games.
+Don't trust Windows build, and it needs in-depth testing.
+Nonetheless, here are the steps to build:
+
+1) [Install MSYS2](https://www.msys2.org/). It's like ArchLinux, but with Windows Kernel. Follow all steps, update everything as the page says.
+2) Cast this magic spell to set up environment: `pacman -S --needed base-devel mingw-w64-i686-toolchain mingw-w64-x86_64-toolchain mingw-w64-i686-cmake mingw-w64-x86_64-cmake mingw-w64-x86_64-llvm mingw-w64-x86_64-clang`
+3) Install Python `pacman -S python3 mingw-w64-x86_64-python3-pip` and run `pip3 install plumbum`
+4) Run `python3 ./ffmpeg-builder.py --build` as usual and pray your gods.
 
 ## Platforms
 

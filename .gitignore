@@ -1,2 +1,6 @@
 release/
 targets/
+targets-backup/
+.idea
+*.iml
+*.ipr
