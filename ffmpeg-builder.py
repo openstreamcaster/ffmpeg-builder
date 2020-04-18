@@ -22,7 +22,7 @@ args = parser.parse_args()
 # Set up targets
 TARGETS_DEFAULT = ["yasm", "nasm", "opencore", "libvpx", "lame", "opus", "xvidcore", "x264", "libogg",
                    "libvorbis", "libtheora", "pkg-config", "cmake", "vid_stab", "x265", "fdk_aac", "av1",
-                   "zlib", "openssl", "ffmpeg"]
+                   "zlib", "openssl", "ffmpeg", "ffmpeg-msys2-deps"]
 TARGETS = TARGETS_DEFAULT
 if args.targets is not None:
     TARGETS = args.targets.split(",")
@@ -765,6 +765,13 @@ def build_all():
             make()
             install()
             mark_as_built("ffmpeg")
+
+    if need_building("ffmpeg-msys2-deps") and (OS_TYPE == OS_TYPE_WINDOWS):
+        download("https://codeload.github.com/olegchir/ffmpeg-windows-deps/zip/master",
+                 "ffmpeg-windows-deps-master.zip", alter_name=None, archive_format=ARCHIVE_FORMAT_ZIP)
+        with target_cwd("ffmpeg-windows-deps-master"):
+            fg("cp", "-f", "./*", f"{RELEASE_DIR}/bin")
+            mark_as_built("ffmpeg-msys2-deps")
 
     print_block()
     print_block(f"Finished: {cpp(RELEASE_DIR)}/bin/ffmpeg",
