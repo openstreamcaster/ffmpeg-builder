@@ -485,14 +485,18 @@ def build_all():
         # But old version 3.100 breaks Windows compatibility when using libiconv
         # since frontend/parse.c now depends on langinfo.h.
         # https://github.com/bincrafters/community/issues/480
-        # Therefore we have no option but to use the latest snapshot from SVN:
+        #
+        # We have option to use the latest snapshot from SVN:
         # https://sourceforge.net/p/lame/svn/HEAD/tarball
-        # Unfortunately, aI don't know how to get this URL without , and that's a shame.
-        # TODO: find a way to detect this URL automatically
+        # https://sourceforge.net/code-snapshots/svn/l/la/lame/svn/lame-svn-r6449-trunk.zip
+        # And get the exact version with: https://sourceforge.net/projects/lame/best_release.json
+        #
+        # But for now I just imported everything into OpenStreamCaster's space on GitHub:
+        # https://codeload.github.com/openstreamcaster/lame/zip/master
 
-        download("https://sourceforge.net/code-snapshots/svn/l/la/lame/svn/lame-svn-r6449-trunk.zip",
-                 "lame-svn-r6449-trunk.zip", alter_name=None, archive_format=ARCHIVE_FORMAT_ZIP)
-        with target_cwd("lame-svn-r6449-trunk", "lame"):
+        download("https://codeload.github.com/openstreamcaster/lame/zip/master",
+                 "lame-master.zip", alter_name=None, archive_format=ARCHIVE_FORMAT_ZIP)
+        with target_cwd("lame-master"):
             configure(RELEASE_DIR, "--disable-shared", "--enable-static")
             make()
             install()
