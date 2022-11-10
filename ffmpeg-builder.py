@@ -20,8 +20,8 @@ LIBRARIES={
     "ffmpeg":{
         "configure_opts": [
             "--pkg-config-flags=--static",
-            "--extra-libs=-lm"
-            "--disable-doc",,
+            "--extra-libs=-lm",
+            "--disable-doc",
             "--disable-debug",
             "--disable-shared",
             "--enable-ffplay",
