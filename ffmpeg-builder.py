@@ -1,8 +1,56 @@
 #pylint: disable=invalid-name, line-too-long
 LIBRARIES={
+    "av1":{
+        "configuration": "cmake",
+        "configure_opts": ["-DENABLE_TESTS=0"],
+        "download_opts": ["https://aomedia.googlesource.com/aom/+archive/refs/tags/v3.5.0.tar.gz",
+                    "av1.tar.gz", "av1"],
+        "folder_name": "aom_build"
+    },
     "cmake":{
         "download_opts": ["https://cmake.org/files/v3.15/cmake-3.15.4.tar.gz", "cmake-3.15.4.tar.gz"],
         "folder_name": "cmake-3.15.4"
+    },
+    "fdk_aac":{
+        "configure_opts": ["--disable-shared", "--enable-static"],
+        "download_opts": ["https://github.com/mstorsjo/fdk-aac/archive/refs/tags/v2.0.2.tar.gz",
+                "fdk-aac-2.0.2.tar.gz"],
+        "folder_name": "fdk-aac-2.0.2"
+    },
+    "ffmpeg":{
+        "configure_opts": [
+            "--pkg-config-flags=--static",
+            "--extra-libs=-lm"
+            "--disable-doc",,
+            "--disable-debug",
+            "--disable-shared",
+            "--enable-ffplay",
+            "--enable-static",
+            "--enable-gpl",
+            "--enable-version3",
+            "--enable-libaom"
+            "--enable-libmp3lame",
+            "--enable-libopencore_amrnb",
+            "--enable-libopencore_amrwb",
+            "--enable-libopus",
+            "--enable-libtheora",
+            "--enable-libvidstab",
+            "--enable-libvorbis",
+            "--enable-libvpx",
+            "--enable-libx264",
+            "--enable-libx265",
+            "--enable-runtime-cpudetect",
+            "--enable-avfilter",
+            "--enable-filters",
+            ],
+        "download_opts": ["https://ffmpeg.org/releases/ffmpeg-5.1.2.tar.xz",
+                    "ffmpeg-5.1.2.tar.xz"],
+        "folder_name": "ffmpeg-5.1.2"
+    },
+    "ffmpeg-msys2-deps":{
+        "download_opts": ["https://codeload.github.com/olegchir/ffmpeg-windows-deps/zip/master",
+                    "ffmpeg-windows-deps-master.zip"],
+        "folder_name": "ffmpeg-windows-deps-master"
     },
     "lame":{
         "configure_opts": ["--disable-shared", "--enable-static"],
@@ -19,8 +67,15 @@ LIBRARIES={
         "download_opts": ["http://downloads.xiph.org/releases/ogg/libogg-1.3.3.tar.gz", "libogg-1.3.3.tar.gz"],
         "folder_name": "libogg-1.3.3"
     },
+    "libsdl":{
+        "configure_opts": ["--disable-shared", "--enable-static"],
+        "download_opts": ["https://www.libsdl.org/release/SDL2-2.0.12.tar.gz",
+                "SDL2-2.0.12.tar.gz"],
+        "folder_name": "SDL2-2.0.12"
+    },
     "libtheora":{
         "configure_opts": ["--disable-shared", "--enable-static", "--disable-oggtest", "--disable-vorbistest", "--disable-examples", "--disable-asm", "--disable-spec"],
+        "dependencies": ["libogg","libvorbis"],
         "download_opts": ["http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.gz", "libtheora-1.1.1.tar.bz"],
         "folder_name": "libtheora-1.1.1"
     },
@@ -31,13 +86,30 @@ LIBRARIES={
     },
     "libvorbis":{
         "configure_opts": ["--disable-shared", "--enable-static", "--disable-oggtest"],
+        "dependencies": ["libogg"],
         "download_opts": ["http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.6.tar.gz", "libvorbis-1.3.6.tar.gz"],
         "folder_name": "libvorbis-1.3.6"
+    },
+    "libx265":{
+        "configuration": "cmake",
+        "configure_opts": ["-DENABLE_SHARED=off", "."],
+        "download_opts": ["https://bitbucket.org/multicoreware/x265/downloads/x265_3.5.tar.gz",
+                    "x265-3.5.tar.gz"],
+        "folder_name": ["x265_3.5", "source"]
     },
     "opencore":{
         "configure_opts": ["--disable-shared", "--enable-static"],
         "download_opts": ["http://downloads.sourceforge.net/project/opencore-amr/opencore-amr/opencore-amr-0.1.5.tar.gz", "opencore-amr-0.1.5.tar.gz"],
         "folder_name": "opencore-amr-0.1.5"
+    },
+    "openh264":{
+        "download_opts": ["https://github.com/cisco/openh264/archive/refs/tags/v2.3.1.tar.gz", "v2.3.1.tar.gz"],
+        "folder_name": "openh264-2.3.1"
+    },
+    "openssl":{
+        "download_opts": ["https://www.openssl.org/source/openssl-1.1.1s.tar.gz",
+                    "openssl-1.1.1s.tar.gz"],
+        "folder_name": "openssl-1.1.1s"
     },
     "pkg-config":{
         "configure_opts": ["--silent", "--with-internal-glib"],
@@ -68,9 +140,13 @@ LIBRARIES={
     "yasm":{
         "download_opts": ["http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz", "yasm-1.3.0.tar.gz"],
         "folder_name": "yasm-1.3.0"
+    },
+    "zlib"{
+        "download_opts": ["https://www.zlib.net/zlib-1.2.13.tar.xz",
+                    "zlib-1.2.13.tar.xz"],
+        "folder_name": "zlib-1.2.13",
     }
 }
-
 SHELL = 'bash'
 
 # Set up constants
@@ -122,12 +198,13 @@ def print_p(*strings):
 # Plumbum provides enough information for a very basic log-driven debugging though.
 # For a deep understanding of underlying errors you have to hack this script by yourself to add some reporting.
 
-def fg(command, *args, silent=False):
+def fg(command: str, *args, silent=False) -> bool:
     try:
         if silent:
             (local[command][args])() #pylint: disable=pointless-statement
         else:
-            return True
+            local[command][args] & FG
+         return True
     except Exception as e: #pylint: disable=broad-except
         print(f"Failed to execute in foreground\n{e}")
         return False
@@ -286,7 +363,6 @@ class Builder:
             release_dir: str="release",
             bin_dir: str="bin",
         ):
-        """"""
         self.__dir_data={
             "target_dir": path_join(CWD, target_dir),
             "release_dir": path_join(CWD, release_dir),
@@ -297,10 +373,12 @@ class Builder:
 
         #Value will filled at build function
         self.__event={
+                'post_download': self.__post_download,
                 'pre_configure': self.__pre_configure,
                 'post_configure': self.__post_configure,
                 'post_install': self.__post_install,
             }
+        self.__is_slavery=False
         self.__old_ldflags=None
         self.__os_type=os_type
         self.__targets=[]
@@ -372,13 +450,55 @@ class Builder:
         """
         return self.__os_type == 'Darwin'
 
+    def __post_download(self, lib):
+        if lib == "av1":
+            mkdir(self.target_dir, "aom_build")
+
     def __pre_configure(self, lib):
         """
         This function will executed before configure
         """
-        if lib == 'cmake':
+        if lib == "av1":
+            # TODO: Don't forget about different kinds of cmake (msys/cmake and mingw/cmake)
+            LIBRARIES['av1']['configure_opts'].append(f"{self.target_dir}/av1")
+
+        elif lib == 'cmake':
             rm("Modules", "FindJava.cmake")
             (local["perl"][ "-p", "-i", "-e", "s/get_filename_component.JNIPATH/#get_filename_component(JNIPATH/g", "Tests/CMakeLists.txt"])()
+
+        elif lib == 'ffmpeg':
+            local.env["PKG_CONFIG_PATH"] = f"{self.path_fixer(self.release_dir)}/lib/pkgconfig"
+            LIBRARIES['ffmpeg']['configure_opts'].append([
+                *self.__ffmpeg_opts,
+                # f"--bindir={self.path_fixer(self.release_dir)}/bin"
+                # f"--libdir={self.path_fixer(self.release_dir)}/lib",
+                f"--pkgconfigdir={self.path_fixer(self.release_dir)}/lib/pkgconfig",
+                f"--extra-cflags=-I{self.path_fixer(self.release_dir)}/include",
+                f"--extra-ldflags=-L{self.path_fixer(self.release_dir)}/lib -fstack-protector"
+            ])
+
+            if not self.__is_slavery:
+                print("Applying free replacements for non-free components")
+                LIBRARIES['ffmpeg']['configure_opts'].append("--enable-gnutls")
+
+            if self.__is_slavery:
+                print_p("You are applying dirty non-free attachments. Are you sure you need this?",
+                        "Now you can't distribute this FFmpeg build to anyone, so it's almost useless in real products.",
+                        "You can't sell or give away these files. Consider using --slavery=false")
+                LIBRARIES['ffmpeg']['configure_opts'].extend([
+                    "--enable-nonfree",
+                    # Non-free unfortunately
+                    # Should be replaced with gnutls
+                    # http://www.iiwnz.com/compile-ffmpeg-with-rtmps-for-facebook
+                    "--enable-openssl",
+                    # libfdk_aac is incompatible with the gpl and --enable-nonfree is not specified.
+                        # https://trac.ffmpeg.org/wiki/Encode/AAC
+                    "--enable-libfdk-aac"])
+
+            # Unfortunately even creators of MSYS2 can't build it with --enable-pthreads :(
+            # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-ffmpeg/PKGBUILD
+            if not self.is_windows:
+                LIBRARIES['ffmpeg']['configure_opts'].extend(["--extra-libs=-lpthread", "--enable-pthreads"])
 
         elif lib == "libvpx" and self.is_mac:
             print("Patching libvpx for MacOS")
@@ -404,7 +524,7 @@ class Builder:
                     local.env["LDFLAGS"] = " -fstack-protector"
 
         elif lib == 'libvorbis':
-            LIBRARIES['libvorbis']['configure_opts'].append([
+            LIBRARIES['libvorbis']['configure_opts'].extend([
                 f"--with-ogg-libraries={self.path_fixer(self.release_dir)}/lib",
                 f"--with-ogg-includes={self.path_fixer(self.release_dir)}/include"
             ])
@@ -415,19 +535,36 @@ class Builder:
             fg("chmod", "+x", "configure.patched")
             fg("mv", "configure.patched", "configure")
             print("Configure processing done.")
-            LIBRARIES['libtheora']['configure_opts'].append([
+            LIBRARIES['libtheora']['configure_opts'].extend([
                 f"--with-ogg-libraries={self.release_dir}/lib",
                 f"--with-ogg-includes={self.release_dir}/include/",
                 f"--with-vorbis-libraries={self.release_dir}/lib",
                 f"--with-vorbis-includes={self.release_dir}/include/"
             ])
 
+        elif lib == 'libx265':
+            ((local["sed"][
+                "s/-lx265/-lx265 -lstdc++/g",
+                f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc"]
+            ) > f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc.tmp")()
+            fg("mv", f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc.tmp", f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc")
+
+        elif lib == 'openssl':
+            LIBRARIES['openssl']['configure_opts'].extend([
+                f"--prefix={self.path_fixer(self.release_dir)}",
+                f"--openssldir={self.path_fixer(self.release_dir)}",
+                f"--with-zlib-include={self.path_fixer(self.release_dir)}/include/",
+                f"--with-zlib-lib={self.path_fixer(self.release_dir)}/lib",
+                "no-shared",
+                "zlib"
+            ])
+
         elif lib == 'pkg-config':
-            LIBRARIES['pkg-config']['configure_opts'].append([f"--with-pc-path={self.release_dir}/lib/pkgconfig"])
+            LIBRARIES['pkg-config']['configure_opts'].append(f"--with-pc-path={self.release_dir}/lib/pkgconfig")
 
         elif lib == 'x264':
             if self.is_linux:
-                LIBRARIES['x264']['configure_opts'].append(['CXXFLAGS=\"-fPIC\"'])
+                LIBRARIES['x264']['configure_opts'].append('CXXFLAGS=\"-fPIC\"')
 
     def __post_configure(self, lib):
         if lib == "lame":
@@ -457,84 +594,29 @@ class Builder:
             if is_exists(dylib_file):
                 rm(dylib_file)
 
-    def build(self,
-            targets: list,
+    def __build_library(self,
+            library: str,
+            threads: int,
             extra_cflags: Optional[str]=None,
             extra_ldflags: Optional[str]=None,
-            threads: Optional[int]=None,
-            is_slavery_mode: bool=False,
-            silent: bool=False
-            ):
-        """
-        Function to run build
-        """
-        extra_cflags=f"-I{self.release_dir}/include {extra_cflags}"
-        extra_ldflags=f"-L{self.release_dir}/lib {extra_ldflags}"
-        self.__targets=targets
+            silent: bool=False):
+        if not self.is_needed(library):
+            return
 
-        if threads is None:
-            from psutil import cpu_count #pylint: disable=import-outside-toplevel
-            threads = cpu_count(logical=False)
-            if self.is_mac:
-                self.__ffmpeg_opts = ("--enable-videotoolbox",)
+        if len(LIBRARIES[library].get('dependencies', [])) != 0:
+            for dependency in LIBRARIES[library]['dependencies']:
+                if not self.is_already_build(dependency):
+                    self.__build_library(dependency)
 
-        print_header("Building process started")
-        mkdirs(self.target_dir, self.release_dir)
-        add_path(self.bin_dir)
-        require_commands("make", "g++", "curl", "tar")
-
-        for library in targets:
-            if self.is_needed(library):
-                self.download(*LIBRARIES[library]['download_opts'])
-                with self.target_cwd(*LIBRARIES[library]['folder_name'] if isinstance(LIBRARIES[library]['folder_name'], list) else LIBRARIES[library]['folder_name']):
-                    self.__event['pre_configure'](library)
-                    if LIBRARIES[library].get("configuration", "configure") == "cmake":
-                        self.cmake(*LIBRARIES[library].get("configure_opts", [], silent=silent))
-                    else:
-                        self.configure(self.release_dir, *LIBRARIES[library].get("configure_opts", []), f"CFLAGS={extra_cflags}", f"LDFLAGS={extra_ldflags}", silent=silent)
-                    self.__event['post_configure'](library)
-                    make(threads, silent=silent)
-                    install(silent=silent)
-                    self.__event['post_install'](library)
-                    self.mark_as_built(library)
-
-        if self.is_needed("x265"):
-            self.download("https://bitbucket.org/multicoreware/x265/downloads/x265_3.2.1.tar.gz",
-                    "x265-3.2.1.tar.gz")
-            with self.target_cwd("x265_3.2.1", "source"):
-                self.cmake("-DENABLE_SHARED:bool=off", ".")
-                make(threads)
-                install()
-                ((local["sed"][
-                    "s/-lx265/-lx265 -lstdc++/g", f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc"]) > f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc.tmp")()
-                fg("mv", f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc.tmp", f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc")
-                self.mark_as_built("x265")
-
-        if self.is_needed("fdk_aac"):
-            self.download("https://sourceforge.net/projects/opencore-amr/files/fdk-aac/fdk-aac-2.0.0.tar.gz/download?use_mirror=gigenet",
-                "fdk-aac-2.0.0.tar.gz")
-            with self.target_cwd("fdk-aac-2.0.0"):
-                self.configure(self.release_dir, "--disable-shared", "--enable-static")
-                make(threads)
-                install()
-                self.mark_as_built("fdk_aac")
-
-        if self.is_needed("av1"):
-            self.download(
-                    "https://aomedia.googlesource.com/aom/+archive/60a00de69ca79fe5f51dcbf862aaaa8eb50ec344.tar.gz",
-                    "av1.tar.gz", "av1")
-            mkdir(self.target_dir, "aom_build")
-            with self.target_cwd("aom_build"):
-                # TODO: Don't forget about different kinds of cmake (msys/cmake and mingw/cmake)
-                self.cmake("-DENABLE_TESTS=0", f"{self.target_dir}/av1")
-                make(threads)
-                install()
-                self.mark_as_built("av1")
-
-        if self.is_needed("zlib"):
-            self.download("https://www.zlib.net/zlib-1.2.11.tar.gz",
-                    "zlib-1.2.11.tar.gz")
-            with self.target_cwd("zlib-1.2.11"):
+        self.download(*LIBRARIES[library]['download_opts'])
+        self.__event['post_download'](library)
+        with self.target_cwd(*LIBRARIES[library]['folder_name'] if isinstance(LIBRARIES[library]['folder_name'], list) else LIBRARIES[library]['folder_name']):
+            self.__event['pre_configure'](library)
+            if library == "ffmpeg-windows-deps-master":
+                fg("cp", "-f", "./*", f"{self.release_dir}/bin")
+                self.mark_as_built("ffmpeg-msys2-deps")
+                return
+            if library == 'zlib':
                 if self.is_windows:
                     # Problem 1:
                     # Please note that
@@ -547,7 +629,6 @@ class Builder:
                     # Installing...
                     # INCLUDE_PATH, LIBRARY_PATH, and BINARY_PATH must be specified
                     # make: *** [win32/Makefile.gcc:128: install] Error 1
-
                     with local.env(INCLUDE_PATH=f"{self.release_dir}/include",
                                 LIBRARY_PATH=f"{self.release_dir}/lib",
                                 BINARY_PATH=f"{self.release_dir}/bin"):
@@ -555,108 +636,57 @@ class Builder:
                         install("-f", "./win32/Makefile.gcc")
                 else:
                     self.configure(self.release_dir)
-                    make(threads)
-                    install()
-                self.mark_as_built("zlib")
+                    make(threads, silent=silent)
+                    install(silent=silent)
+                self.mark_as_built('zlib')
+                return
+            if LIBRARIES[library].get("configuration", "configure") == "cmake":
+                self.cmake(*LIBRARIES[library].get("configure_opts", [], silent=silent))
+            else:
+                if library == 'openssl':
+                    if not fg("bash",
+                            "./config",
+                            *LIBRARIES['openssl'].get("configure_opts", []
+                        ):
+                        sys.exit(1)
+                else:
+                    self.configure(self.release_dir, *LIBRARIES[library].get("configure_opts", []), f"CFLAGS='{extra_cflags}'", f"LDFLAGS='{extra_ldflags}'", silent=silent)
+            self.__event['post_configure'](library)
+            make(threads, silent=silent)
+            install(silent=silent)
+            self.__event['post_install'](library)
+            self.mark_as_built(library)
 
-        if self.is_needed("openssl"):
-            self.download("https://www.openssl.org/source/openssl-1.1.1d.tar.gz",
-                    "openssl-1.1.1d.tar.gz")
-            with self.target_cwd("openssl-1.1.1d"):
-                if not fg("bash",
-                        "./config",
-                        f"--prefix={self.path_fixer(self.release_dir)}",
-                        f"--openssldir={self.path_fixer(self.release_dir)}",
-                        f"--with-zlib-include={self.path_fixer(self.release_dir)}/include/",
-                        f"--with-zlib-lib={self.path_fixer(self.release_dir)}/lib",
-                        "no-shared",
-                        "zlib"):
-                    sys.exit(1)
-                make(threads)
-                install()
-                self.mark_as_built("openssl")
+    def build(self,
+            targets: list,
+            threads: Optional[int]=None,
+            is_slavery_mode: bool=False,
+            **kwargs
+        ):
+        """
+        Function to run build
+        """
+        extra_cflags=f"-I{self.release_dir}/include {extra_cflags}"
+        extra_ldflags=f"-L{self.release_dir}/lib {extra_ldflags}"
+        self.__targets=targets
+        self.__is_slavery=is_slavery_mode
 
-        if self.is_needed("sdl"):
-            self.download("https://www.libsdl.org/release/SDL2-2.0.12.tar.gz",
-                "SDL2-2.0.12.tar.gz")
-            with self.target_cwd("SDL2-2.0.12"):
-                self.configure(self.release_dir, "--disable-shared", "--enable-static")
-                make(threads)
-                install()
-                self.mark_as_built("sdl")
+        if threads is None:
+            from psutil import cpu_count #pylint: disable=import-outside-toplevel
+            threads = cpu_count(logical=False)
+            if self.is_mac:
+                self.__ffmpeg_opts = ("--enable-videotoolbox",)
 
-        if self.is_needed("ffmpeg"):
-            self.download("https://ffmpeg.org/releases/ffmpeg-5.1.2.tar.xz",
-                    "ffmpeg-5.1.2.tar.xz")
-            with self.target_cwd("ffmpeg-5.1.2"):
-                local.env["PKG_CONFIG_PATH"] = f"{self.path_fixer(self.release_dir)}/lib/pkgconfig"
-                opts = (self.release_dir,
-                        *self.__ffmpeg_opts,
-                        # f"--bindirr={self.path_fixer(self.release_dir)}/bin"
-                        # f"--libdir={self.path_fixer(self.release_dir)}/lib",
-                        f"--pkgconfigdir={self.path_fixer(self.release_dir)}/lib/pkgconfig",
-                        "--pkg-config-flags=--static",
-                        f"--extra-cflags=-I{self.path_fixer(self.release_dir)}/include",
-                        f"--extra-ldflags=-L{self.path_fixer(self.release_dir)}/lib",
-                        "--extra-ldflags=-fstack-protector",
-                        "--extra-libs=-lm",
-                        "--enable-static",
-                        "--disable-debug",
-                        "--disable-shared",
-                        "--enable-ffplay",
-                        "--disable-doc",
-                        "--enable-gpl",
-                        "--enable-version3",
-                        "--enable-libvpx",
-                        "--enable-libmp3lame",
-                        "--enable-libopus",
-                        "--enable-libtheora",
-                        "--enable-libvorbis",
-                        "--enable-libx264",
-                        "--enable-libx265",
-                        "--enable-runtime-cpudetect",
-                        "--enable-avfilter",
-                        "--enable-libopencore_amrwb",
-                        "--enable-libopencore_amrnb",
-                        "--enable-filters",
-                        "--enable-libvidstab",
-                        "--enable-libaom")
+        print_header("Building process started")
+        mkdirs(self.target_dir, self.release_dir)
+        add_path(self.bin_dir)
 
-                if not is_slavery_mode:
-                    print("Applying free replacements for non-free components")
-                    opts = opts + ("--enable-gnutls",)
-
-                if is_slavery_mode:
-                    print_p("You are applying dirty non-free attachments. Are you sure you need this?",
-                            "Now you can't distribute this FFmpeg build to anyone, so it's almost useless in real products.",
-                            "You can't sell or give away these files. Consider using --slavery=false")
-                    opts = opts + (
-                        "--enable-nonfree",
-                        # Non-free unfortunately
-                        # Should be replaced with gnutls
-                        # http://www.iiwnz.com/compile-ffmpeg-with-rtmps-for-facebook/
-                        "--enable-openssl",
-                        # libfdk_aac is incompatible with the gpl and --enable-nonfree is not specified.
-                        # https://trac.ffmpeg.org/wiki/Encode/AAC
-                        "--enable-libfdk-aac",)
-
-                # Unfortunately even creators of MSYS2 can't build it with --enable-pthreads :(
-                # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-ffmpeg/PKGBUILD
-                if not self.is_windows:
-                    opts = opts + ("--extra-libs=-lpthread",)
-                    opts = opts + ("--enable-pthreads",)
-
-                self.configure(*opts)
-                make(threads)
-                install()
-                self.mark_as_built("ffmpeg")
-
-        if self.is_needed("ffmpeg-msys2-deps") and self.is_windows:
-            self.download("https://codeload.github.com/olegchir/ffmpeg-windows-deps/zip/master",
-                    "ffmpeg-windows-deps-master.zip")
-            with self.target_cwd("ffmpeg-windows-deps-master"):
-                fg("cp", "-f", "./*", f"{self.release_dir}/bin")
-                self.mark_as_built("ffmpeg-msys2-deps")
+        for library in targets:
+            self.__build_library(
+                library,
+                threads,
+                **kwargs
+            )
 
         print_block()
         print_block(f"Finished: {self.path_fixer(self.release_dir)}/bin/ffmpeg",
@@ -709,7 +739,7 @@ class Builder:
         #    configure_file("x265.pc.in" "x265.pc" @ONLY)
         #    install(FILES       "${CMAKE_CURRENT_BINARY_DIR}/x265.pc"
         #    DESTINATION "${LIB_INSTALL_DIR}/pkgconfig")
-        # '''
+        #
         # Don't forget that you can search on Windows without grep -r, using
         # something like " dir -Recurse | Select-String -pattern 'x265.pc'" in Power Shell to find errors like this.
         #
@@ -762,6 +792,9 @@ class Builder:
             return
         raise Exception
 
+    def is_already_build(self, library) -> bool:
+        return is_exists(path_join(self.target_dir, f"{library}.ok"))
+
     def is_needed(self, target) -> bool:
         """
         Check if library need to build or not
@@ -772,9 +805,11 @@ class Builder:
         """
         if target not in self.__targets:
             return False
+        if target == "ffmpeg-msys2-deps" and not self.is_windows:
+            return False
 
         print(f"\nBuilding target: {target}\n{ITALIC_SEPARATOR}")
-        if is_exists(path_join(self.target_dir, f"{target}.ok")):
+        if is_already_build(target):
             print_block("Cached version found")
             return False
         print("No cache, needs building")
@@ -856,12 +891,12 @@ def main() -> None:
     parser.add_argument('--target-dir')
     parser.add_argument('--release-dir')
     parser.add_argument('--use-nonfree-libs', dest="slavery_mode", action='store_true', help="Use non-free libraries", default=True)
-    parser.add_argument('--use-system-build-essentials', dest="default_tools", action='store_true', help="Use cmake, nasm, yasm, pkg-config that installed on system", default=False)
+    parser.add_argument('--use-system-build-tools', dest="default_tools", action='store_true', help="Use cmake, nasm, yasm, pkg-config that installed on system", default=False)
     args = parser.parse_args()
 
     targets=['av1', 'cmake', 'fdk_aac', 'ffmpeg', 'ffmpeg-msys2-deps', 'lame', 'libogg',
-             'libvorbis', 'libtheora', 'libvpx', 'nasm', 'opencore', 'openssl', 'libopus',
-             'pkg-config', 'sdl', 'vidstab', 'x264', 'x265', 'xvidcore', 'yasm', 'zlib'
+             'libopus', 'libvorbis', 'libtheora', 'libvpx', 'libx265', 'nasm', 'opencore',
+             'openssl', 'pkg-config', 'libsdl', 'vidstab', 'x264', 'xvidcore', 'yasm', 'zlib'
             ]
     #Check if user specify specific targets
     targets = args.targets.split(",") if args.targets is not None else targets
@@ -873,8 +908,9 @@ def main() -> None:
     print_header("Processing targets:")
     print_block(targets)
 
-    os_type='Windows' if hasattr(sys, 'getwindowsversion') else local['uname']()
+    os_type=system()
     if args.build_mode:
+        require_commands("make", "curl", "tar", *['cmake', 'nasm', 'yasm', 'pkg-config'] if args.default_tools else *[])
         kwargs={}
         if args.jobs is not None:
             kwargs={"threads": args.jobs}
@@ -901,6 +937,7 @@ if __name__ == '__main__':
     from os import getcwd as CWD
     from os.path import exists as is_exists, join as path_join
     from typing import Optional
+    from platform import system
 
     try:
         from plumbum import local, FG, CommandNotFound
