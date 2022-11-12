@@ -20,122 +20,142 @@ LIBRARIES={
             "--enable-filters",
             ],
         "download_opts": ["https://ffmpeg.org/releases/ffmpeg-5.1.1.tar.xz",
-                    "ffmpeg-5.1.1.tar.xz"],
+             "ffmpeg-5.1.1.tar.xz"],
         "folder_name": "ffmpeg-5.1.1"
     },
     "ffmpeg-msys2-deps":{
         "download_opts": ["https://codeload.github.com/olegchir/ffmpeg-windows-deps/zip/master",
-                    "ffmpeg-windows-deps-master.zip"],
+             "ffmpeg-windows-deps-master.zip"],
         "folder_name": "ffmpeg-windows-deps-master"
     },
     "libaom":{
         "configuration": "cmake",
         "configure_opts": ["-DENABLE_TESTS=0"],
         "download_opts": ["https://aomedia.googlesource.com/aom/+archive/refs/tags/v3.5.0.tar.gz",
-                    "aom.tar.gz", "aom"],
+             "aom.tar.gz", "aom"],
         "folder_name": "aom_build"
     },
     "libfdk-aac":{
         "configure_opts": ["--disable-shared", "--enable-static"],
         "download_opts": ["https://github.com/mstorsjo/fdk-aac/archive/refs/tags/v2.0.2.tar.gz",
-                "fdk-aac-2.0.2.tar.gz"],
+            "fdk-aac-2.0.2.tar.gz"],
         "folder_name": "fdk-aac-2.0.2"
     },
     "libmp3lame":{
         "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://codeload.github.com/openstreamcaster/lame/zip/master", "lame-master.zip"],
+        "download_opts": ["https://codeload.github.com/openstreamcaster/lame/zip/master",
+            "lame-master.zip"],
         "folder_name": "lame-master"
+    },
+    "libkvazaar":{
+        "configure_opts": ["--disable-shared", "--enable-static"],
+        "download_opts": ["https://github.com/ultravideo/kvazaar/releases/download/v2.1.0/kvazaar-2.1.0.tar.xz",
+            "kvazaar-2.1.0.tar.xz"],
+        "folder_name": "kvazaar-2.1.0"
     },
     "libopus":{
         "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz", "opus-1.3.1.tar.gz"],
+        "download_opts": ["https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz",
+            "opus-1.3.1.tar.gz"],
         "folder_name": "opus-1.3.1"
     },
     "libogg":{
         "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["http://downloads.xiph.org/releases/ogg/libogg-1.3.5.tar.gz", "libogg-1.3.5.tar.gz"],
+        "download_opts": ["http://downloads.xiph.org/releases/ogg/libogg-1.3.5.tar.gz",
+            "libogg-1.3.5.tar.gz"],
         "folder_name": "libogg-1.3.5"
     },
     "libopencore":{
         "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://downloads.sourceforge.net/project/opencore-amr/opencore-amr/opencore-amr-0.1.6.tar.gz", "opencore-amr-0.1.6.tar.gz"],
+        "download_opts": ["https://downloads.sourceforge.net/project/opencore-amr/opencore-amr/opencore-amr-0.1.6.tar.gz",
+            "opencore-amr-0.1.6.tar.gz"],
         "folder_name": "opencore-amr-0.1.6"
     },
     "libopenh264":{
         "configuration": "meson",
         "configure_opts": ["--default-library=static"],
-        "download_opts": ["https://github.com/cisco/openh264/archive/refs/tags/v2.3.1.tar.gz", "v2.3.1.tar.gz"],
+        "download_opts": ["https://github.com/cisco/openh264/archive/refs/tags/v2.3.1.tar.gz",
+            "v2.3.1.tar.gz"],
         "folder_name": "openh264_build"
     },
     "libsdl":{
         "configure_opts": ["--disable-shared", "--enable-static"],
         "download_opts": ["https://github.com/libsdl-org/SDL/releases/download/release-2.24.2/SDL2-2.24.2.tar.gz",
-                "SDL2-2.24.2.tar.gz"],
+            "SDL2-2.24.2.tar.gz"],
         "folder_name": "SDL2-2.24.2"
     },
     "libtheora":{
         "configure_opts": ["--disable-shared", "--enable-static", "--disable-oggtest", "--disable-vorbistest", "--disable-examples", "--disable-asm", "--disable-spec"],
         "dependencies": ["libogg","libvorbis"],
-        "download_opts": ["http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2", "libtheora-1.1.1.tar.bz"],
+        "download_opts": ["http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2",
+            "libtheora-1.1.1.tar.bz"],
         "folder_name": "libtheora-1.1.1"
     },
     "libvidstab":{
         "configuration": "cmake",
         "configure_opts": ["-DBUILD_SHARED_LIBS=OFF", "-DUSE_OMP=OFF", "-DENABLE_SHARED=off", "."],
-        "download_opts": ["https://github.com/georgmartius/vid.stab/archive/v1.1.0.tar.gz", "georgmartius-vid.stab-v1.1.0-0-g60d65da.tar.gz"],
+        "download_opts": ["https://github.com/georgmartius/vid.stab/archive/v1.1.0.tar.gz",
+            "vidstab-1.1.0.tar.gz"],
         "folder_name": "vid.stab-1.1.0"
     },
     "libvorbis":{
         "configure_opts": ["--disable-shared", "--enable-static", "--disable-oggtest"],
         "dependencies": ["libogg"],
-        "download_opts": ["http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.7.tar.gz", "libvorbis-1.3.7.tar.gz"],
+        "download_opts": ["http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.7.tar.gz",
+            "libvorbis-1.3.7.tar.gz"],
         "folder_name": "libvorbis-1.3.7"
     },
     "libvpx":{
         "configure_opts": ["--disable-shared", "--disable-unit-tests"],
-        "download_opts": ["https://github.com/webmproject/libvpx/archive/refs/tags/v1.12.0.tar.gz", "libvpx-1.12.0.tar.gz"],
+        "download_opts": ["https://github.com/webmproject/libvpx/archive/refs/tags/v1.12.0.tar.gz",
+            "libvpx-1.12.0.tar.gz"],
         "folder_name": "libvpx-1.12.0"
     },
     "libx264":{
         "configure_opts": ["--enable-static", "--enable-pic"],
-        "download_opts": ["https://code.videolan.org/videolan/x264/-/archive/stable/x264-stable.tar.gz", "x264-stable.tar.gz"],
+        "download_opts": ["https://code.videolan.org/videolan/x264/-/archive/stable/x264-stable.tar.gz",
+            "x264-stable.tar.gz"],
         "folder_name": "x264-stable"
     },
     "libx265":{
         "configuration": "cmake",
         "configure_opts": ["-DENABLE_SHARED=off", "."],
         "download_opts": ["https://bitbucket.org/multicoreware/x265_git/downloads/x265_3.5.tar.gz",
-                    "x265_3.5.tar.gz"],
+            "x265_3.5.tar.gz"],
         "folder_name": ["x265_3.5", "source"]
     },
     "libxvid":{
         "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://downloads.xvid.com/downloads/xvidcore-1.3.7.tar.gz", "xvidcore-1.3.7.tar.gz"],
+        "download_opts": ["https://downloads.xvid.com/downloads/xvidcore-1.3.7.tar.gz",
+            "xvidcore-1.3.7.tar.gz"],
         "folder_name": ["xvidcore", "build", "generic"]
     },
     "openssl":{
         "configure_opts": [],
         "download_opts": ["https://www.openssl.org/source/openssl-1.1.1s.tar.gz",
-                    "openssl-1.1.1s.tar.gz"],
+            "openssl-1.1.1s.tar.gz"],
         "folder_name": "openssl-1.1.1s"
     },
     "pkg-config":{
         "configure_opts": ["--silent", "--with-internal-glib"],
-        "download_opts": ["http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar.gz", "pkg-config-0.29.2.tar.gz"],
+        "download_opts": ["http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar.gz",
+            "pkg-config-0.29.2.tar.gz"],
         "folder_name": "pkg-config-0.29.2"
     },
     "nasm":{
         "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/nasm-2.15.05.tar.xz", "nasm.tar.gz"],
+        "download_opts": ["https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/nasm-2.15.05.tar.xz",
+            "nasm.tar.gz"],
         "folder_name": "nasm-2.15.05"
     },
     "yasm":{
-        "download_opts": ["http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz", "yasm-1.3.0.tar.gz"],
+        "download_opts": ["http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz",
+            "yasm-1.3.0.tar.gz"],
         "folder_name": "yasm-1.3.0"
     },
     "zlib":{
         "download_opts": ["https://www.zlib.net/zlib-1.2.13.tar.xz",
-                    "zlib-1.2.13.tar.xz"],
+            "zlib-1.2.13.tar.xz"],
         "folder_name": "zlib-1.2.13",
     }
 }
@@ -217,9 +237,16 @@ def fg(command: str, *args, silent: bool=False) -> bool:
         print(f"Failed to execute in foreground\n{e}")
         return False
 
-def add_path(dir_name, take_priority=True) -> None:
+def add_path(dir_name: str, take_priority: bool=True) -> None:
     """
     Add directory to PATH env
+
+    Parameters
+    ----------
+    dir_name: str
+        Directory name/path
+    take_priority: bool (default True)
+        If true, the directory will be prioritized
 
     Returns
     -------
@@ -236,13 +263,18 @@ def mkdir(*dir_tree) -> None:
     """
     Create directory
 
+    Parameters
+    ----------
+    *dir_tree
+        Directory hierarcy
+
     Retuns
     ------
     None
     """
     dir_name = path_join(*dir_tree)
     if not os.path.exists(dir_name):
-        pathlib.Path(dir_name).mkdir(parents=True, exist_ok=True)
+        Path(dir_name).mkdir(parents=True, exist_ok=True)
         if is_exists(dir_name):
             print(f"Directory {dir_name} created successfully")
             return
@@ -254,6 +286,11 @@ def mkdirs(*dirs) -> None:
     """
     Create multiple directiory
 
+    Parameters
+    ----------
+    *dirs
+        Directory
+
     Returns
     -------
     None
@@ -261,10 +298,14 @@ def mkdirs(*dirs) -> None:
     for current_dir in dirs:
         mkdir(current_dir)
 
-
-def rmdir(dir_name) -> None:
+def rmdir(dir_name: str) -> None:
     """
     Remove directory
+
+    Parameters
+    ----------
+    dir_name: str
+        Directory name that you wanna remove
 
     Returns
     -------
@@ -282,6 +323,11 @@ def rmdir(dir_name) -> None:
 def rm(*file_tree) -> None:
     """
     Remove file
+
+    Parameters
+    ----------
+    *file_tree
+        File location hierarcy
 
     Returns
     -------
@@ -301,6 +347,11 @@ def command_exists(cmd: str) -> bool:
     """
     Check if commands exist
 
+    Parameters
+    ----------
+    cmd: str
+        Command name
+
     Returns
     -------
     bool
@@ -315,6 +366,11 @@ def require_commands(*commands) -> None:
     """
     Check if required commands exist
 
+    Parameters
+    ----------
+    *commands
+        List of commands
+
     Returns
     -------
     None
@@ -325,9 +381,16 @@ def require_commands(*commands) -> None:
         print(f"Required commands not found: {absent}")
         sys.exit(1)
 
-def clean_all(release_dir, target_dir) -> None:
+def clean_all(release_dir: str, target_dir: str) -> None:
     """
     Clean all build file
+
+    Parameters
+    ----------
+    release_dir: str
+        Release directory
+    target_dir: str
+        Target directory
 
     Returns
     -------
@@ -338,9 +401,18 @@ def clean_all(release_dir, target_dir) -> None:
     rmdir(target_dir)
     print("Cleaning finished")
 
-def make(threads, *args, **kwargs) -> None:
+def make(threads: int, *args, **kwargs) -> None:
     """
     Make command
+
+    Parameters
+    ----------
+    threads: int
+        How many threads
+    *args
+        Will be passed to fg function
+    **kwargs
+        Will be passed to fg function
 
     Returns
     -------
@@ -355,6 +427,13 @@ def install(*args, **kwargs) -> None:
     """
     Make install
 
+    Parameters
+    ----------
+    *args
+        Will be passed to fg function
+    **kwargs
+        Will be passed to fg function
+
     Returns
     -------
     None
@@ -366,7 +445,7 @@ def install(*args, **kwargs) -> None:
 
 class Builder:
     """
-    CLass to build ffmpeg
+    Class to build ffmpeg
     """
     def __init__(self,
             os_type,
@@ -461,7 +540,7 @@ class Builder:
         """
         return self.__os_type == 'Darwin'
 
-    def __add_ffmpeg_lib(self, lib) -> None:
+    def __add_ffmpeg_lib(self, lib: str) -> None:
         """
         Add enabled library to ffmpeg configuration
 
@@ -540,7 +619,7 @@ class Builder:
 
         if LIBRARIES[library].get("configuration", "configure") == "meson":
             self.meson(*LIBRARIES[library].get("configure_opts", []), silent=silent)
-            fg("ninja", f"-j {threads}", silent=silent)
+            fg("ninja", "-j", threads, silent=silent)
             fg("ninja", "install")
             self.mark_as_built(library)
             return True
@@ -723,7 +802,19 @@ class Builder:
             if self.is_windows and self.__old_ldflags is not None:
                 local.env["LDFLAGS"] = self.__old_ldflags
 
-    def __post_install(self, lib):
+    def __post_install(self, lib: str):
+        """
+        This function will executed after installing
+
+        Parameters
+        ----------
+        lib: str
+            Library name
+
+        Returns
+        -------
+        None
+        """
         if lib == 'libx265':
             ((local["sed"][
                 "s/-lx265/-lx265 -lstdc++/g",
@@ -739,7 +830,23 @@ class Builder:
     def __build_library(self,
             library: str,
             threads: int,
-            silent: bool=False):
+            silent: bool=False) -> None:
+        """
+        This function will handle the build process
+
+        Parameters
+        ----------
+        library: str
+            Library name
+        threads: int
+            How many threads
+        silent: bool (default False)
+            Verbose or not
+
+        Returns
+        -------
+        None
+        """
         if not self.is_needed(library):
             return
 
@@ -767,9 +874,24 @@ class Builder:
             extra_cflags: str="",
             extra_ldflags: str="",
             **kwargs
-        ):
+        ) -> None:
         """
-        Function to run build
+        Function to start building
+
+        Parameters
+        ----------
+        targets: list
+            List of library that we will build
+        threads: Optional[int]
+            Number of threads
+        extra_cflags: str (default "")
+            Extra CFLAGS
+        extra_ldflags: str (default "")
+            Extra LDFLAGS
+
+        Returns
+        -------
+        None
         """
         extra_cflags=f"-I{self.release_dir}/include {extra_cflags}"
         extra_ldflags=f"-L{self.release_dir}/lib {extra_ldflags}"
@@ -813,6 +935,13 @@ class Builder:
         """
         Run configure
 
+        Parameters
+        ----------
+        *args
+            Will passed to configure
+        **kwargs
+            Will passed to fg function
+
         Returns
         -------
         None
@@ -826,9 +955,20 @@ class Builder:
             sys.exit(1)
         print("Configuring done.")
 
-    def cmake(self, *args, **kwargs):
+    def cmake(self, *args, **kwargs) -> None:
         """
         Run CMake
+
+        Parameters
+        ----------
+        *args
+            Will passed to CMake
+        **kwargs
+            Will passed to fg function
+
+        Returns
+        -------
+        None
         """
         print("Making with CMake...")
         # MSYS2 with MinGW toolchain
@@ -910,9 +1050,14 @@ class Builder:
             return
         raise Exception
 
-    def is_already_build(self, library) -> bool:
+    def is_already_build(self, library: str) -> bool:
         """
         Check if library already build
+
+        Parameters
+        ----------
+        library: str
+            The library name
 
         Returns
         -------
@@ -920,38 +1065,63 @@ class Builder:
         """
         return is_exists(path_join(self.target_dir, f"{library}.ok"))
 
-    def is_needed(self, target) -> bool:
+    def is_needed(self, library: str) -> bool:
         """
         Check if library need to build or not
+
+        Parameters
+        ----------
+        library: str
+            The library name
 
         Returns
         -------
         bool
         """
-        if target not in self.__targets:
+        if library not in self.__targets:
             return False
-        if target == "ffmpeg-msys2-deps" and not self.is_windows:
+        if library == "ffmpeg-msys2-deps" and not self.is_windows:
             return False
 
-        print(f"\nBuilding target: {target}\n{ITALIC_SEPARATOR}")
-        if self.is_already_build(target):
+        print(f"\nBuilding target: {library}\n{ITALIC_SEPARATOR}")
+        if self.is_already_build(library):
             print_block("Cached version found")
             return False
         print("No cache, needs building")
         return True
 
-    def mark_as_built(self, target):
+    def mark_as_built(self, library: str) -> None:
         """
         Mark if the library has been build
+
+        Parameters
+        ----------
+        library: str
+            The library name
+
+        Returns
+        -------
+        None
         """
-        filename = path_join(self.target_dir, f"{target}.ok")
+        filename = path_join(self.target_dir, f"{library}.ok")
         print_block(f"Creating a lock file: {filename}")
-        with open(filename, "w", encoding="utf-8") as f: #pylint: disable=unused-variable
+        with open(filename, "w", encoding="utf-8") as _:
             pass
 
-    def meson(self, *args, **kwargs):
+    def meson(self, *args, **kwargs) -> None:
         """
         Run meson
+
+        Parameters
+        ----------
+        *args
+            Will passed to meson
+        **kwargs
+            Will passed to fg function
+
+        Returns
+        -------
+        None
         """
         meson_flags=("meson", "setup", f"--prefix={self.release_dir}",) + args
         print(f"Configuring with meson\nFlags: {meson_flags}")
@@ -962,6 +1132,21 @@ class Builder:
     def path_fixer(self, src: str) -> str:
         """
         Fix windows path
+
+        Parameters
+        ----------
+        src: str
+            Path
+
+        Returns
+        -------
+        str
+            Fixed path
+
+        Raises
+        ------
+        NotImplementedError
+            Raised if continuing without properly parsed path
 
         Information
         -----------
@@ -1000,6 +1185,11 @@ class Builder:
     def target_cwd(self, *dirs):
         """
         Change current working directiory
+
+        Parameters
+        ----------
+        *dirs
+            List of directories
         """
         result_dir=self.target_dir
         for curr_dir in dirs:
@@ -1031,9 +1221,9 @@ def main() -> None:
     parser.add_argument('--disable-ffplay', dest="disable_ffplay", action='store_true', help="Disable building ffplay", default=False)
     args = parser.parse_args()
 
-    targets=['cmake', 'libaom', 'libfdk-aac', 'libmp3lame', 'libogg', 'libopus', 'libopencore', 'libopenh264',
-             'libsdl',  'libtheora', 'libvidstab', 'libvorbis', 'libvpx', 'libx264', 'libx265', 'libxvid',
-             'nasm', 'openssl', 'pkg-config', 'yasm', 'zlib', 'ffmpeg-msys2-deps', 'ffmpeg'
+    targets=['cmake', 'libaom', 'libfdk-aac', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore',
+             'libopenh264', 'libsdl',  'libtheora', 'libvidstab', 'libvorbis', 'libvpx', 'libx264', 'libx265',
+             'libxvid', 'nasm', 'openssl', 'pkg-config', 'yasm', 'zlib', 'ffmpeg-msys2-deps', 'ffmpeg'
             ]
     #Check if user specify specific targets
     targets = args.targets.split(",") if args.targets is not None else targets
@@ -1051,7 +1241,7 @@ def main() -> None:
     print_block(str(targets))
 
     if args.build_mode:
-        require_commands("autoconf", "make", "curl", "tar", *['cmake', 'nasm', 'yasm', 'pkg-config'] if args.default_tools else [])
+        require_commands("autoconf", "libtoolize", "make", "curl", "tar", *['cmake', 'nasm', 'yasm', 'pkg-config'] if args.default_tools else [])
         os_type=system()
         kwargs={}
         if args.jobs is not None:
@@ -1073,7 +1263,7 @@ if __name__ == '__main__':
     import sys
     import time
     import os
-    import pathlib
+    from pathlib import Path
     from zipfile import ZipFile
     from argparse import ArgumentParser
     from os import getcwd as CWD
