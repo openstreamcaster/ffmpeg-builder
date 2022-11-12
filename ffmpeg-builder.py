@@ -35,6 +35,12 @@ LIBRARIES={
              "aom.tar.gz", "aom"],
         "folder_name": "aom_build"
     },
+    "libdav1d":{
+        "configuration": "meson",
+        "configure_opts": ["--default-library=static"],
+        "download_opts": ["https://code.videolan.org/videolan/dav1d/-/archive/1.0.0/dav1d-1.0.0.tar.gz", "dav1d-1.0.0.tar.gz"],
+        "folder_name": "dav1d_build"
+    },
     "libfdk-aac":{
         "configure_opts": ["--disable-shared", "--enable-static"],
         "download_opts": ["https://github.com/mstorsjo/fdk-aac/archive/refs/tags/v2.0.2.tar.gz",
@@ -648,6 +654,9 @@ class Builder:
         elif lib == 'libopenh264':
             mkdir(self.target_dir, LIBRARIES['libopenh264']['folder_name'])
 
+        elif lib == 'libdav1d':
+            mkdir(self.target_dir, LIBRARIES['libdav1d']['folder_name'])
+
     def __pre_configure(self, lib: str) -> None:
         """
         This function will executed before configure
@@ -668,6 +677,9 @@ class Builder:
         elif lib == "libaom":
             # TODO: Don't forget about different kinds of cmake (msys/cmake and mingw/cmake)
             LIBRARIES['libaom']['configure_opts'].append(f"{self.target_dir}/aom")
+
+        elif lib == 'libdav1d':
+            LIBRARIES['libdav1d']['configure_opts'].extend([f"--libdir={self.release_dir}/lib", f"{self.target_dir}/dav1d-{re_findall('dav1d-(.+).tar', LIBRARIES['libdav1d']['download_opts'][1])[0]}"])
 
         elif lib == 'libfdk-aac':
             fg("./autogen.sh")
@@ -717,7 +729,7 @@ class Builder:
                 "build/make/Makefile.patched"]) > "build/make/Makefile")()
 
         elif lib == 'libopenh264':
-            LIBRARIES['libopenh264']['configure_opts'].append(f"--libdir={self.release_dir}/lib",f"{self.target_dir}/openh264-{re_findall('v(.+).tar', LIBRARIES['libopenh264']['download_opts'][1])[0]}")
+            LIBRARIES['libopenh264']['configure_opts'].extend([f"--libdir={self.release_dir}/lib",f"{self.target_dir}/openh264-{re_findall('v(.+).tar', LIBRARIES['libopenh264']['download_opts'][1])[0]}"])
 
         elif lib == 'libopus':
             # On Windows, there's a huge problem.
@@ -1221,7 +1233,7 @@ def main() -> None:
     parser.add_argument('--disable-ffplay', dest="disable_ffplay", action='store_true', help="Disable building ffplay", default=False)
     args = parser.parse_args()
 
-    targets=['cmake', 'libaom', 'libfdk-aac', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore',
+    targets=['cmake', 'libaom', 'libdav1d', 'libfdk-aac', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore',
              'libopenh264', 'libsdl',  'libtheora', 'libvidstab', 'libvorbis', 'libvpx', 'libx264', 'libx265',
              'libxvid', 'nasm', 'openssl', 'pkg-config', 'yasm', 'zlib', 'ffmpeg-msys2-deps', 'ffmpeg'
             ]
@@ -1232,9 +1244,13 @@ def main() -> None:
     targets = [x for x in targets if x not in ('cmake', 'pkg-config', 'nasm', 'yasm')] if args.default_tools else targets
     targets = [x for x in targets if x not in ('libfdk-aac', 'openssl')] if not args.slavery_mode else targets
     targets = targets.remove('libsdl') if 'libsdl' in targets and args.disable_ffplay else targets
-    if bool(not command_exists("meson") or not command_exists("ninja")) and 'libopenh264' in targets:
-        print("Building libopenh264 now disabled. Meson and ninja weren\'t installed.\nInstall them with `pip install meson ninja`")
-        targets.remove('libopenh264')
+    if bool(not command_exists("meson") or not command_exists("ninja")) and any(True if _ in targets else False for _ in ("libopenh264", "libdav1d")):
+        print("Building libdav1d and libopenh264 now disabled. Meson and ninja weren\'t installed.\nInstall them with `pip install meson ninja`")
+        for _ in ('libdav1d', 'libopenh264'):
+            try:
+                targets.remove(_)
+            except ValueError:
+                pass
 
     print_block("Hello, slave, how are you?" if args.slavery_mode else "Building FFmpeg, free as in freedom!")
     print_header("Processing targets:")
