@@ -29,7 +29,8 @@ LIBRARIES={
         "folder_name": "ffmpeg-windows-deps-master"
     },
     "harfbuzz":{
-        "configure_opts": ["--enable-static", "--disable-shared"],
+        "configure_opts": ["--enable-static", "--disable-shared", "--with-freetype=yes"],
+        "dependencies": ["libfreetype"],
         "download_opts": ["https://github.com/harfbuzz/harfbuzz/releases/download/5.3.1/harfbuzz-5.3.1.tar.xz",
             "harfbuzz-5.3.1.tar.xz"],
         "folder_name": "harfbuzz-5.3.1"
