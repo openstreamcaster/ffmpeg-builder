@@ -28,6 +28,13 @@ LIBRARIES={
              "ffmpeg-windows-deps-master.zip"],
         "folder_name": "ffmpeg-windows-deps-master"
     },
+    "gnutls":{
+        "configure_opts": ["--disable-shared", "--enable-static", "--without-p11-kit"],
+        "dependencies": ["libgmp", "libtasn1", "libunistring", "nettle"],
+        "download_opts": ["https://www.gnupg.org/ftp/gcrypt/gnutls/v3.6/gnutls-3.6.16.tar.xz",
+            "gnutls-3.6.16.tar.xz"],
+        "folder_name": "gnutls-3.6.16"
+    },
     "harfbuzz":{
         "configure_opts": ["--enable-static", "--disable-shared", "--with-freetype=yes"],
         "dependencies": ["libfreetype"],
@@ -79,6 +86,12 @@ LIBRARIES={
         "download_opts": ["https://github.com/fribidi/fribidi/releases/download/v1.0.12/fribidi-1.0.12.tar.xz",
             "fribidi-1.0.12.tar.xz"],
         "folder_name": "fribidi-1.0.12"
+    },
+    "libgmp":{
+        "configure_opts": ["--disable-shared", "--enable-static"],
+        "download_opts": ["https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz",
+            "gmp-6.2.1.tar.xz"],
+        "folder_name": "gmp-6.2.1"
     },
     "libmp3lame":{
         "configure_opts": ["--disable-shared", "--enable-static"],
@@ -137,6 +150,18 @@ LIBRARIES={
             "libtheora-1.1.1.tar.bz"],
         "folder_name": "libtheora-1.1.1"
     },
+    "libtasn1":{
+        "configure_opts": ["--disable-shared", "--enable-static", "--disable-doc"],
+        "download_opts": ["https://ftp.gnu.org/gnu/libtasn1/libtasn1-4.19.0.tar.gz",
+            "libtasn1-4.19.0.tar.gz"],
+        "folder_name": "libtasn1-4.19.0"
+    },
+    "libunistring":{
+        "configure_opts": ["--disable-shared", "--enable-static"],
+        "download_opts": ["https://ftp.gnu.org/gnu/libunistring/libunistring-1.1.tar.xz",
+            "libunistring-1.1.tar.xz"],
+        "folder_name": "libunistring-1.1"
+    },
     "libvidstab":{
         "configuration": "cmake",
         "configure_opts": ["-DBUILD_SHARED_LIBS=OFF", "-DUSE_OMP=OFF", "-DENABLE_SHARED=off", "."],
@@ -188,6 +213,13 @@ LIBRARIES={
         "download_opts": ["https://github.com/sekrit-twc/zimg/archive/refs/tags/release-3.0.4.tar.gz",
             "zimg-3.0.4.tar.gz"],
         "folder_name": "zimg-release-3.0.4"
+    },
+    "nettle":{
+        "configure_opts": ["--disable-shared", "--enable-static", "--disable-documentation"],
+        "dependencies": ['libgmp'],
+        "download_opts": ["https://ftp.gnu.org/gnu/nettle/nettle-3.8.1.tar.gz",
+            "nettle-3.8.1.tar.gz"],
+        "folder_name": "nettle-3.8.1"
     },
     "openssl":{
         "configure_opts": [],
@@ -610,7 +642,7 @@ class Builder:
         lib: str
             Library name
         """
-        if lib in ('libogg', 'libsdl'):
+        if lib in ('libogg', 'libsdl', "libgmp", "libnettle"):
             return
         if lib == 'libopencore':
             LIBRARIES['ffmpeg']['configure_opts'].extend([
@@ -703,19 +735,19 @@ class Builder:
         -------
         None
         """
-        if lib == 'libfreetype':
-            if 'zlib' in self.__targets:
-                LIBRARIES['libfreetype']['configure_opts'].append("--with-zlib=yes")
-                LIBRARIES['libfreetype']["dependencies"]=['zlib']
-            else:
-                LIBRARIES['libfreetype']['configure_opts'].append("--with-zlib=no")
-
-        elif lib == 'harfbuzz':
+        if lib == 'harfbuzz':
             if 'libfreetype' in self.__targets:
                 LIBRARIES['libfreetype']['configure_opts'].append("--with-freetype=yes")
                 LIBRARIES['libfreetype']["dependencies"]=['libfreetype']
-            else:
-                LIBRARIES['libfreetype']['configure_opts'].append("--with-freetype=no")
+                return
+            LIBRARIES['libfreetype']['configure_opts'].append("--with-freetype=no")
+
+        elif lib == 'libfreetype':
+            if 'zlib' in self.__targets:
+                LIBRARIES['libfreetype']['configure_opts'].append("--with-zlib=yes")
+                LIBRARIES['libfreetype']["dependencies"]=['zlib']
+                return
+            LIBRARIES['libfreetype']['configure_opts'].append("--with-zlib=no")
 
     def __post_download(self, lib: str) -> None:
         """
@@ -773,7 +805,7 @@ class Builder:
             if 'libsdl' in self.__targets:
                 LIBRARIES['ffmpeg']['configure_opts'].append('--enable-ffplay')
 
-            if not self.__is_slavery:
+            if not self.__is_slavery and 'gnutls' in self.__targets:
                 print("Applying free replacements for non-free components")
                 LIBRARIES['ffmpeg']['configure_opts'].append("--enable-gnutls")
 
@@ -820,8 +852,8 @@ class Builder:
             if self.is_windows:
                 if self.__old_ldflags is not None:
                     local.env["LDFLAGS"] = f"{self.__old_ldflags} -fstack-protector"
-                else:
-                    local.env["LDFLAGS"] = " -fstack-protector"
+                    return
+                local.env["LDFLAGS"] = " -fstack-protector"
 
         elif lib == 'libtheora':
             print("Removing --fforce-adr from configure")
@@ -1001,6 +1033,8 @@ class Builder:
         extra_ldflags=f"-L{self.release_dir}/lib {extra_ldflags}"
         self.__targets=targets
         self.__is_slavery=is_slavery_mode
+        if not is_slavery_mode:
+            self.__targets.append("gnutls")
 
         if threads is None:
             from psutil import cpu_count #pylint: disable=import-outside-toplevel
@@ -1015,7 +1049,7 @@ class Builder:
         with local.env(
             CFLAGS=f"{local.env.get('CFLAGS', '')} {extra_cflags}",
             LDFLAGS=f"{local.env.get('LDFLAGS', '')} {extra_ldflags}",
-            PKG_CONFIG_PATH=f"{self.path_fixer(self.release_dir)}/lib/pkgconfig"
+            PKG_CONFIG_LIBDIR=f"{self.path_fixer(self.release_dir)}/lib/pkgconfig"
             ):
             for library in targets:
                 self.__build_library(
@@ -1326,7 +1360,7 @@ def main() -> None:
     parser.add_argument('--disable-ffplay', dest="disable_ffplay", action='store_true', help="Disable building ffplay", default=False)
     args = parser.parse_args()
 
-    targets=['cmake', 'libaom', 'libass', 'libdav1d', 'libfdk-aac', 'libfontconfig', 'libfreetype', 'libfribidi', 'libkvazaar', 'libmp3lame',
+    targets=['cmake', 'gnutls', 'libaom', 'libass', 'libdav1d', 'libfdk-aac', 'libfontconfig', 'libfreetype', 'libfribidi', 'libkvazaar', 'libmp3lame',
              'libogg', 'libopus', 'libopencore', 'libopenh264', 'libsdl', 'libsoxr',  'libtheora', 'libvidstab',
              'libvmaf', 'libvorbis', 'libvpx', 'libx264', 'libx265', 'libxvid', 'libzimg', 'nasm', 'openssl',
              'pkg-config', 'yasm', 'zlib', 'ffmpeg-msys2-deps', 'ffmpeg'
