@@ -12,12 +12,13 @@ LIBRARIES={
             "--disable-doc",
             "--disable-debug",
             "--disable-shared",
+            "--disable-ffprobe",
             "--enable-static",
             "--enable-gpl",
             "--enable-version3",
             "--enable-runtime-cpudetect",
             "--enable-avfilter",
-            "--enable-filters",
+            "--enable-filters"
             ],
         "download_opts": ["https://ffmpeg.org/releases/ffmpeg-5.1.1.tar.xz",
              "ffmpeg-5.1.1.tar.xz"],
@@ -28,9 +29,15 @@ LIBRARIES={
              "ffmpeg-windows-deps-master.zip"],
         "folder_name": "ffmpeg-windows-deps-master"
     },
+    "gmp":{
+        "configure_opts": ["--disable-shared", "--enable-static"],
+        "download_opts": ["https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz",
+            "gmp-6.2.1.tar.xz"],
+        "folder_name": "gmp-6.2.1"
+    },
     "gnutls":{
         "configure_opts": ["--disable-shared", "--enable-static", "--without-p11-kit"],
-        "dependencies": ["libgmp", "libtasn1", "libunistring", "nettle"],
+        "dependencies": ["gmp", "libtasn1", "libunistring", "nettle"],
         "download_opts": ["https://www.gnupg.org/ftp/gcrypt/gnutls/v3.6/gnutls-3.6.16.tar.xz",
             "gnutls-3.6.16.tar.xz"],
         "folder_name": "gnutls-3.6.16"
@@ -44,7 +51,7 @@ LIBRARIES={
     },
     "libaom":{
         "configuration": "cmake",
-        "configure_opts": ["-DENABLE_TESTS=0"],
+        "configure_opts": ["-DENABLE_TESTS=0", "-DENABLE_NASM=on"],
         "download_opts": ["https://aomedia.googlesource.com/aom/+archive/refs/tags/v3.5.0.tar.gz",
              "aom.tar.gz", "aom"],
         "folder_name": "aom_build"
@@ -56,9 +63,16 @@ LIBRARIES={
             "libass-0.16.0.tar.xz"],
         "folder_name": "libass-0.16.0"
     },
+    "libbluray":{
+        "configure_opts": ["--disable-shared", "--enable-static", "--disable-bdjava-jar", "--without-libxml2"],
+        "dependencies": ["libfontconfig", "libfreetype", "libudfread"],
+        "download_opts": ["https://code.videolan.org/videolan/libbluray/-/archive/1.3.3/libbluray-1.3.3.tar.gz",
+            "libbluray-1.3.3.tar.gz"],
+        "folder_name": "libbluray-1.3.3"
+    },
     "libdav1d":{
         "configuration": "meson",
-        "configure_opts": ["--default-library=static"],
+        "configure_opts": ["--default-library=static", "-Denable_tools=false", "-Denable_tests=false"],
         "download_opts": ["https://code.videolan.org/videolan/dav1d/-/archive/1.0.0/dav1d-1.0.0.tar.gz", "dav1d-1.0.0.tar.gz"],
         "folder_name": "dav1d_build"
     },
@@ -86,12 +100,6 @@ LIBRARIES={
         "download_opts": ["https://github.com/fribidi/fribidi/releases/download/v1.0.12/fribidi-1.0.12.tar.xz",
             "fribidi-1.0.12.tar.xz"],
         "folder_name": "fribidi-1.0.12"
-    },
-    "libgmp":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz",
-            "gmp-6.2.1.tar.xz"],
-        "folder_name": "gmp-6.2.1"
     },
     "libmp3lame":{
         "configure_opts": ["--disable-shared", "--enable-static"],
@@ -143,6 +151,13 @@ LIBRARIES={
             "0.1.3.tar.gz"],
         "folder_name": "soxr-0.1.3"
     },
+    "libsvtav1":{
+        "configuration": "cmake",
+        "configure_opts": ["-DBUILD_DEC=OFF", "-DBUILD_SHARED_LIBS=OFF"],
+        "download_opts": ["https://gitlab.com/AOMediaCodec/SVT-AV1/-/archive/v1.3.0/SVT-AV1-v1.3.0.tar.gz",
+            "SVT-AV1-v1.3.0.tar.gz"],
+        "folder_name": "SVT-AV1-v1.3.0"
+    },
     "libtheora":{
         "configure_opts": ["--disable-shared", "--enable-static", "--disable-oggtest", "--disable-vorbistest", "--disable-examples", "--disable-asm", "--disable-spec"],
         "dependencies": ["libogg","libvorbis"],
@@ -155,6 +170,12 @@ LIBRARIES={
         "download_opts": ["https://ftp.gnu.org/gnu/libtasn1/libtasn1-4.19.0.tar.gz",
             "libtasn1-4.19.0.tar.gz"],
         "folder_name": "libtasn1-4.19.0"
+    },
+    "libudfread":{
+        "configure_opts": ["--disable-shared", "--enable-static"],
+        "download_opts": ["https://code.videolan.org/videolan/libudfread/-/archive/1.1.2/libudfread-1.1.2.tar.gz",
+            "libudfread-1.1.2.tar.gz"],
+        "folder_name": "libudfread-1.1.2"
     },
     "libunistring":{
         "configure_opts": ["--disable-shared", "--enable-static"],
@@ -184,7 +205,7 @@ LIBRARIES={
         "folder_name": "libvorbis-1.3.7"
     },
     "libvpx":{
-        "configure_opts": ["--disable-shared", "--disable-unit-tests"],
+        "configure_opts": ["--disable-shared", "--disable-unit-tests", "--disable-examples", "--enable-vp9-highbitdepth"],
         "download_opts": ["https://github.com/webmproject/libvpx/archive/refs/tags/v1.12.0.tar.gz",
             "libvpx-1.12.0.tar.gz"],
         "folder_name": "libvpx-1.12.0"
@@ -216,7 +237,7 @@ LIBRARIES={
     },
     "nettle":{
         "configure_opts": ["--disable-shared", "--enable-static", "--disable-documentation"],
-        "dependencies": ['libgmp'],
+        "dependencies": ['gmp'],
         "download_opts": ["https://ftp.gnu.org/gnu/nettle/nettle-3.8.1.tar.gz",
             "nettle-3.8.1.tar.gz"],
         "folder_name": "nettle-3.8.1"
@@ -642,7 +663,7 @@ class Builder:
         lib: str
             Library name
         """
-        if lib in ('libogg', 'libsdl', "libgmp", "libnettle"):
+        if lib in ('libogg', 'libsdl', "libudfread"):
             return
         if lib == 'libopencore':
             LIBRARIES['ffmpeg']['configure_opts'].extend([
@@ -650,6 +671,9 @@ class Builder:
                 "--enable-libopencore_amrwb"
             ])
             return
+        #Cuurrenty an issue in libvmaf also requires FFmpeg to be built with --ld="g++" for a static build to succeed.
+        if lib == 'libvmaf':
+            LIBRARIES['ffmpeg']['configure_opts'].append("--ld=\"g++\"")
         LIBRARIES['ffmpeg']['configure_opts'].append(f"--enable-{lib}")
         return
 
@@ -737,10 +761,10 @@ class Builder:
         """
         if lib == 'harfbuzz':
             if 'libfreetype' in self.__targets:
-                LIBRARIES['libfreetype']['configure_opts'].append("--with-freetype=yes")
-                LIBRARIES['libfreetype']["dependencies"]=['libfreetype']
+                LIBRARIES['harfbuzz']['configure_opts'].append("--with-freetype=yes")
+                LIBRARIES['harfbuzz']["dependencies"]=['libfreetype']
                 return
-            LIBRARIES['libfreetype']['configure_opts'].append("--with-freetype=no")
+            LIBRARIES['harbuzz']['configure_opts'].append("--with-freetype=no")
 
         elif lib == 'libfreetype':
             if 'zlib' in self.__targets:
@@ -802,6 +826,9 @@ class Builder:
                     if ffmpeg_lib in self.__targets:
                         self.__add_ffmpeg_lib(ffmpeg_lib)
 
+            if 'gmp' in self.__targets:
+                LIBRARIES['ffmpeg']['configure_opts'].append('--enable-gmp')
+
             if 'libsdl' in self.__targets:
                 LIBRARIES['ffmpeg']['configure_opts'].append('--enable-ffplay')
 
@@ -828,6 +855,9 @@ class Builder:
         elif lib == "libaom":
             # TODO: Don't forget about different kinds of cmake (msys/cmake and mingw/cmake)
             LIBRARIES['libaom']['configure_opts'].append(f"{self.target_dir}/aom")
+
+        elif lib == 'libbluray':
+            fg("autoreconf", "-fiv")
 
         elif lib == 'libdav1d':
             LIBRARIES['libdav1d']['configure_opts'].extend([f"--libdir={self.release_dir}/lib", f"{self.target_dir}/dav1d-{re_findall('dav1d-(.+).tar', LIBRARIES['libdav1d']['download_opts'][1])[0]}"])
@@ -867,6 +897,9 @@ class Builder:
                 f"--with-vorbis-libraries={self.release_dir}/lib",
                 f"--with-vorbis-includes={self.release_dir}/include/"
             ])
+
+        elif lib == 'libudfread':
+            fg("autoreconf", "-fiv")
 
         elif lib == 'libvmaf':
             LIBRARIES['libvmaf']['configure_opts'].append(f"--libdir={self.release_dir}/lib")
@@ -1033,9 +1066,6 @@ class Builder:
         extra_ldflags=f"-L{self.release_dir}/lib {extra_ldflags}"
         self.__targets=targets
         self.__is_slavery=is_slavery_mode
-        if not is_slavery_mode:
-            self.__targets.append("gnutls")
-
         if threads is None:
             from psutil import cpu_count #pylint: disable=import-outside-toplevel
             threads = cpu_count(logical=False)
@@ -1136,7 +1166,7 @@ class Builder:
         # https://stackoverflow.com/questions/41492504/how-to-get-native-windows-path-inside-msys-python
         # TODO: implement command line option to switch between versions of CMake, protect with cpp(RELEASE_DIR)
 
-        if not fg("cmake", f"-DCMAKE_INSTALL_PREFIX:PATH={self.release_dir}", *args, **kwargs):
+        if not fg("cmake", "-DCMAKE_BUILD_TYPE=Release", f"-DCMAKE_INSTALL_PREFIX:PATH={self.release_dir}", *args, **kwargs):
             sys_exit(1)
         print("Making with CMake done.")
 
@@ -1360,10 +1390,10 @@ def main() -> None:
     parser.add_argument('--disable-ffplay', dest="disable_ffplay", action='store_true', help="Disable building ffplay", default=False)
     args = parser.parse_args()
 
-    targets=['cmake', 'gnutls', 'libaom', 'libass', 'libdav1d', 'libfdk-aac', 'libfontconfig', 'libfreetype', 'libfribidi', 'libkvazaar', 'libmp3lame',
-             'libogg', 'libopus', 'libopencore', 'libopenh264', 'libsdl', 'libsoxr',  'libtheora', 'libvidstab',
-             'libvmaf', 'libvorbis', 'libvpx', 'libx264', 'libx265', 'libxvid', 'libzimg', 'nasm', 'openssl',
-             'pkg-config', 'yasm', 'zlib', 'ffmpeg-msys2-deps', 'ffmpeg'
+    targets=['cmake', 'gmp', 'gnutls', 'libaom', 'libass', 'libbluray', 'libdav1d', 'libfdk-aac', 'libfontconfig', 'libfreetype',
+             'libfribidi', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore', 'libopenh264', 'libsdl', 'libsoxr',
+             'libsvtav1', 'libtheora', 'libvidstab', 'libvmaf', 'libvorbis', 'libvpx', 'libx264', 'libx265', 'libxvid',
+             'libzimg', 'nasm', 'openssl', 'pkg-config', 'yasm', 'zlib', 'ffmpeg-msys2-deps', 'ffmpeg'
             ]
     #Check if user specify specific targets
     targets = [_ for _ in args.targets.split(",") if _ in targets] if args.targets is not None else targets
