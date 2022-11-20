@@ -2,7 +2,8 @@
 from typing import Optional
 LIBRARIES={
     "cmake":{
-        "download_opts": ["https://cmake.org/files/v3.15/cmake-3.15.4.tar.gz", "cmake-3.15.4.tar.gz"],
+        "download_opts": ["https://cmake.org/files/v3.15/cmake-3.15.4.tar.gz",
+            "cmake-3.15.4.tar.gz"],
         "folder_name": "cmake-3.15.4"
     },
     "ffmpeg":{
@@ -73,7 +74,8 @@ LIBRARIES={
     "libdav1d":{
         "configuration": "meson",
         "configure_opts": ["--default-library=static", "-Denable_tools=false", "-Denable_tests=false"],
-        "download_opts": ["https://code.videolan.org/videolan/dav1d/-/archive/1.0.0/dav1d-1.0.0.tar.gz", "dav1d-1.0.0.tar.gz"],
+        "download_opts": ["https://code.videolan.org/videolan/dav1d/-/archive/1.0.0/dav1d-1.0.0.tar.gz",
+            "dav1d-1.0.0.tar.gz"],
         "folder_name": "dav1d_build"
     },
     "libfdk-aac":{
@@ -150,6 +152,13 @@ LIBRARIES={
         "download_opts": ["https://github.com/chirlu/soxr/archive/refs/tags/0.1.3.tar.gz",
             "0.1.3.tar.gz"],
         "folder_name": "soxr-0.1.3"
+    },
+    "libsrt":{
+        "configuration": "cmake",
+        "configure_opts": ["-DENABLE_SHARED=off"],
+        "download_opts": ["https://github.com/Haivision/srt/archive/refs/tags/v1.5.1.tar.gz",
+            "v1.5.1.tar.gz"],
+        "folder_name": "srt-1.5.1"
     },
     "libsvtav1":{
         "configuration": "cmake",
@@ -272,8 +281,6 @@ LIBRARIES={
         "folder_name": "zlib-1.2.13",
     }
 }
-SHELL = 'bash'
-
 # Set up constants
 DOWNLOAD_RETRY_DELAY = 3
 DOWNLOAD_RETRY_ATTEMPTS = 3
@@ -532,7 +539,7 @@ def make(threads: int, *args, **kwargs) -> None:
     None
     """
     print("Running make...")
-    if not fg("make", "-j", threads, *args, **kwargs):
+    if not fg("make", f"-j{threads}", *args, **kwargs):
         sys_exit(1)
     print("Make done.")
 
@@ -572,7 +579,7 @@ class Builder:
             "bin_dir": path_join(CWD(), release_dir, bin_dir),
             "pkg_config_path": path_join(CWD(), release_dir, "lib", "pkgconfig")
         }
-        self.__ffmpeg_opts = tuple()
+        self.__ffmpeg_opts = []
 
         #Value will filled at build function
         self.__event={
@@ -696,7 +703,6 @@ class Builder:
         """
         if library == "ffmpeg-windows-deps-master":
             fg("cp", "-f", "./*", f"{self.release_dir}/bin")
-            self.mark_as_built("ffmpeg-msys2-deps")
             return True
         if library == 'libx264' and self.is_linux:
             with local.env(CXXFLAGS="-fPIC"):
@@ -707,7 +713,9 @@ class Builder:
                 "./config",
                 *LIBRARIES['openssl'].get("configure_opts", [])):
                 sys_exit(1)
-            return False
+            make(threads, silent=silent)
+            fg("make", "install_sw", f"-j{threads}")
+            return True
         if library == 'zlib':
             if self.is_windows:
                 # Problem 1:
@@ -726,19 +734,16 @@ class Builder:
                     BINARY_PATH=f"{self.release_dir}/bin"):
                     make(threads, "-f", "./win32/Makefile.gcc")
                     install("-f", "./win32/Makefile.gcc")
-                    self.mark_as_built('zlib')
                     return True
             self.configure(*LIBRARIES['zlib'].get("configure_opts", []), silent=silent)
             make(threads, silent=silent)
             install(silent=silent)
-            self.mark_as_built('zlib')
             return True
 
         if LIBRARIES[library].get("configuration", "configure") == "meson":
             self.meson(*LIBRARIES[library].get("configure_opts", []), silent=silent)
             fg("ninja", "-j", threads, silent=silent)
             fg("ninja", "install")
-            self.mark_as_built(library)
             return True
         if LIBRARIES[library].get("configuration", "configure") == "cmake":
             self.cmake(*LIBRARIES[library].get("configure_opts", []), silent=silent)
@@ -764,7 +769,7 @@ class Builder:
                 LIBRARIES['harfbuzz']['configure_opts'].append("--with-freetype=yes")
                 LIBRARIES['harfbuzz']["dependencies"]=['libfreetype']
                 return
-            LIBRARIES['harbuzz']['configure_opts'].append("--with-freetype=no")
+            LIBRARIES['harfbuzz']['configure_opts'].append("--with-freetype=no")
 
         elif lib == 'libfreetype':
             if 'zlib' in self.__targets:
@@ -772,6 +777,14 @@ class Builder:
                 LIBRARIES['libfreetype']["dependencies"]=['zlib']
                 return
             LIBRARIES['libfreetype']['configure_opts'].append("--with-zlib=no")
+
+        elif lib == 'libsrt':
+            if 'gnutls' in self.__targets:
+                LIBRARIES['libsrt']["dependencies"]=['gnutls']
+                return
+            if 'openssl' in self.__targets:
+                LIBRARIES['libsrt']["dependencies"]=['openssl']
+                return
 
     def __post_download(self, lib: str) -> None:
         """
@@ -822,7 +835,7 @@ class Builder:
                 f"--extra-ldflags=-L{self.path_fixer(self.release_dir)}/lib -fstack-protector"
             ])
             for ffmpeg_lib in LIBRARIES:
-                if ffmpeg_lib.startswith("lib") or ffmpeg_lib in ("openssl", "zlib"):
+                if ffmpeg_lib.startswith("lib") or ffmpeg_lib in ("gmp", "openssl", "zlib"):
                     if ffmpeg_lib in self.__targets:
                         self.__add_ffmpeg_lib(ffmpeg_lib)
 
@@ -884,6 +897,15 @@ class Builder:
                     local.env["LDFLAGS"] = f"{self.__old_ldflags} -fstack-protector"
                     return
                 local.env["LDFLAGS"] = " -fstack-protector"
+
+        elif lib == 'libsrt':
+            if 'openssl' in self.__targets:
+                LIBRARIES['libsrt']['configure_opts'].append("-DOPENSSL_USE_STATIC_LIBS=on")
+                return
+            if 'gnutls' in self.__targets:
+                LIBRARIES['libsrt']['configure_opts'].append("-DUSE_ENCLIB=gnutls")
+                return
+            LIBRARIES['libsrt']['configure_opts'].append("-DENABLE_ENCRYPTION=off")
 
         elif lib == 'libtheora':
             print("Removing --fforce-adr from configure")
@@ -979,7 +1001,14 @@ class Builder:
         -------
         None
         """
-        if lib == 'libx265':
+        if lib == 'gnutls':
+            #Fix static linking issue
+            with open(f"{self.release_dir}/lib/pkgconfig/gnutls.pc") as f:
+                value=f.read()
+            with open(f"{self.release_dir}/lib/pkgconfig/gnutls.pc", "w") as f:
+                f.write(value.replace("Libs: -L${libdir} -lgnutls", "Libs: -L${libdir} -lgnutls -ltasn1 -lgmp -lunistring -lnettle -lhogweed"))
+
+        elif lib == 'libx265':
             ((local["sed"][
                 "s/-lx265/-lx265 -lstdc++/g",
                 f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc"]
@@ -990,6 +1019,20 @@ class Builder:
             dylib_file = path_join(self.target_dir, "lib", "libxvidcore.4.dylib")
             if is_exists(dylib_file):
                 rm(dylib_file)
+
+        elif lib == 'nettle':
+            #Fix static linking issue
+            with open(f"{self.release_dir}/lib/pkgconfig/nettle.pc") as f:
+                value=f.read()
+            with open(f"{self.release_dir}/lib/pkgconfig/nettle.pc", "w") as f:
+                f.write(value.replace("Libs: -L${libdir} -lnettle", "Libs: -L${libdir} -lnettle -lgmp"))
+
+        elif lib == 'openssl':
+            #Fix static linking issue
+            with open(f"{self.release_dir}/lib/pkgconfig/libcrypto.pc") as f:
+                value=f.read()
+            with open(f"{self.release_dir}/lib/pkgconfig/libcrypto.pc", "w") as f:
+                f.write(value.replace("Libs: -L${libdir} -lcrypto", "Libs: -L${libdir} -lcrypto -lz -ldl"))
 
     def __build_library(self,
             library: str,
@@ -1026,11 +1069,10 @@ class Builder:
         self.__event['post_download'](library)
         with self.target_cwd(*LIBRARIES[library]['folder_name'] if isinstance(LIBRARIES[library]['folder_name'], list) else [LIBRARIES[library]['folder_name']]):
             self.__event['pre_configure'](library)
-            if self.__configuration_handler(threads, silent, library):
-                return
-            self.__event['post_configure'](library)
-            make(threads, silent=silent)
-            install(silent=silent)
+            if not self.__configuration_handler(threads, silent, library):
+                self.__event['post_configure'](library)
+                make(threads, silent=silent)
+                install(silent=silent)
             self.__event['post_install'](library)
             self.mark_as_built(library)
 
@@ -1040,6 +1082,7 @@ class Builder:
             is_slavery_mode: bool=False,
             extra_cflags: str="",
             extra_ldflags: str="",
+            extra_ffmpeg_args: str="",
             **kwargs
         ) -> None:
         """
@@ -1057,6 +1100,8 @@ class Builder:
             Extra CFLAGS
         extra_ldflags: str (default "")
             Extra LDFLAGS
+        extra_ffmpeg_args: str (default "")
+            Extra argument to ffmpeg
 
         Returns
         -------
@@ -1070,7 +1115,8 @@ class Builder:
             from psutil import cpu_count #pylint: disable=import-outside-toplevel
             threads = cpu_count(logical=False)
             if self.is_mac:
-                self.__ffmpeg_opts = ("--enable-videotoolbox",)
+                self.__ffmpeg_opts.append("--enable-videotoolbox")
+        self.__ffmpeg_opts.extend(extra_ffmpeg_args.split())
 
         print_header("Building process started")
         mkdirs(self.target_dir, self.release_dir)
@@ -1376,22 +1422,23 @@ def main() -> None:
     parser = ArgumentParser(description='Build a special edition of FFMPEG.')
     parser.add_argument('-j', '--jobs', metavar='int', action="store", dest="jobs", type=int, help='Number of parallel jobs', default=None)
     parser.add_argument('-b', '--build', action="store_true", dest="build_mode", help='Run build')
-    parser.add_argument('--clean', action="store_true", dest="clean_mode", help='Clean solution')
+    parser.add_argument('-c', '--clean', action="store_true", dest="clean_mode", help='Clean solution')
     parser.add_argument('-q', '--silent', action="store_true", dest="silent_mode", help='Disable build debug')
     parser.add_argument('--targets', action="store", dest="targets",
                     help='comma-separated targets for building (empty = build all)')
     parser.add_argument('--exclude-targets', action="store", dest="exclude_targets", help='Don\'t build these')
-    parser.add_argument('--extra-cflags', dest="extra_cflags", help='Build extra CFLAGS')
-    parser.add_argument('--extra-ldflags', dest="extra_ldflags", help='Build extra LDFLAGS')
-    parser.add_argument('--target-dir', default="targets", help="Target directory")
-    parser.add_argument('--release-dir', default="release", help="Release directory")
+    parser.add_argument('--extra-cflags', metavar='string', dest="extra_cflags", help='Build extra CFLAGS', default="")
+    parser.add_argument('--extra-ldflags', metavar='string', dest="extra_ldflags", help='Build extra LDFLAGS', default="")
+    parser.add_argument('--extra-ffmpeg-args', metavar='string', dest='ffmpeg_args', help='Extra FFmpeg argument', default="")
+    parser.add_argument('--target-dir', metavar='dir', default="targets", help="Target directory")
+    parser.add_argument('--release-dir', metavar='dir', default="release", help="Release directory")
+    parser.add_argument('--disable-ffplay', dest="disable_ffplay", action='store_true', help="Disable building ffplay", default=False)
     parser.add_argument('--use-nonfree-libs', dest="slavery_mode", action='store_true', help="Use non-free libraries", default=False)
     parser.add_argument('--use-system-build-tools', dest="default_tools", action='store_true', help="Use cmake, nasm, yasm, pkg-config that installed on system", default=False)
-    parser.add_argument('--disable-ffplay', dest="disable_ffplay", action='store_true', help="Disable building ffplay", default=False)
     args = parser.parse_args()
 
     targets=['cmake', 'gmp', 'gnutls', 'libaom', 'libass', 'libbluray', 'libdav1d', 'libfdk-aac', 'libfontconfig', 'libfreetype',
-             'libfribidi', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore', 'libopenh264', 'libsdl', 'libsoxr',
+             'libfribidi', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore', 'libopenh264', 'libsdl', 'libsoxr', 'libsrt',
              'libsvtav1', 'libtheora', 'libvidstab', 'libvmaf', 'libvorbis', 'libvpx', 'libx264', 'libx265', 'libxvid',
              'libzimg', 'nasm', 'openssl', 'pkg-config', 'yasm', 'zlib', 'ffmpeg-msys2-deps', 'ffmpeg'
             ]
@@ -1427,6 +1474,9 @@ def main() -> None:
             targets,
             is_slavery_mode=args.slavery_mode,
             silent=args.silent_mode,
+            extra_cflags=args.extra_cflags,
+            extra_ldflags=args.extra_ldflags,
+            extra_ffmpeg_args=args.ffmpeg_args,
             **kwargs
         )
 
