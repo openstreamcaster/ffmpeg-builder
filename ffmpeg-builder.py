@@ -1,286 +1,5 @@
 #pylint: disable=invalid-name, line-too-long, missing-module-docstring
-from typing import Optional
-LIBRARIES={
-    "cmake":{
-        "download_opts": ["https://cmake.org/files/v3.15/cmake-3.15.4.tar.gz",
-            "cmake-3.15.4.tar.gz"],
-        "folder_name": "cmake-3.15.4"
-    },
-    "ffmpeg":{
-        "configure_opts": [
-            "--pkg-config-flags=--static",
-            "--extra-libs=-lm",
-            "--disable-doc",
-            "--disable-debug",
-            "--disable-shared",
-            "--disable-ffprobe",
-            "--enable-static",
-            "--enable-gpl",
-            "--enable-version3",
-            "--enable-runtime-cpudetect",
-            "--enable-avfilter",
-            "--enable-filters"
-            ],
-        "download_opts": ["https://ffmpeg.org/releases/ffmpeg-5.1.1.tar.xz",
-             "ffmpeg-5.1.1.tar.xz"],
-        "folder_name": "ffmpeg-5.1.1"
-    },
-    "ffmpeg-msys2-deps":{
-        "download_opts": ["https://codeload.github.com/olegchir/ffmpeg-windows-deps/zip/master",
-             "ffmpeg-windows-deps-master.zip"],
-        "folder_name": "ffmpeg-windows-deps-master"
-    },
-    "gmp":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz",
-            "gmp-6.2.1.tar.xz"],
-        "folder_name": "gmp-6.2.1"
-    },
-    "gnutls":{
-        "configure_opts": ["--disable-shared", "--enable-static", "--without-p11-kit"],
-        "dependencies": ["gmp", "libtasn1", "libunistring", "nettle"],
-        "download_opts": ["https://www.gnupg.org/ftp/gcrypt/gnutls/v3.6/gnutls-3.6.16.tar.xz",
-            "gnutls-3.6.16.tar.xz"],
-        "folder_name": "gnutls-3.6.16"
-    },
-    "harfbuzz":{
-        "configure_opts": ["--enable-static", "--disable-shared", "--with-freetype=yes"],
-        "dependencies": ["libfreetype"],
-        "download_opts": ["https://github.com/harfbuzz/harfbuzz/releases/download/5.3.1/harfbuzz-5.3.1.tar.xz",
-            "harfbuzz-5.3.1.tar.xz"],
-        "folder_name": "harfbuzz-5.3.1"
-    },
-    "libaom":{
-        "configuration": "cmake",
-        "configure_opts": ["-DENABLE_TESTS=0", "-DENABLE_NASM=on"],
-        "download_opts": ["https://aomedia.googlesource.com/aom/+archive/refs/tags/v3.5.0.tar.gz",
-             "aom.tar.gz", "aom"],
-        "folder_name": "aom_build"
-    },
-    "libass":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "dependencies": ["libfontconfig", "libfreetype", "libfribidi", "harfbuzz"],
-        "download_opts": ["https://github.com/libass/libass/releases/download/0.16.0/libass-0.16.0.tar.xz",
-            "libass-0.16.0.tar.xz"],
-        "folder_name": "libass-0.16.0"
-    },
-    "libbluray":{
-        "configure_opts": ["--disable-shared", "--enable-static", "--disable-bdjava-jar", "--without-libxml2"],
-        "dependencies": ["libfontconfig", "libfreetype", "libudfread"],
-        "download_opts": ["https://code.videolan.org/videolan/libbluray/-/archive/1.3.3/libbluray-1.3.3.tar.gz",
-            "libbluray-1.3.3.tar.gz"],
-        "folder_name": "libbluray-1.3.3"
-    },
-    "libdav1d":{
-        "configuration": "meson",
-        "configure_opts": ["--default-library=static", "-Denable_tools=false", "-Denable_tests=false"],
-        "download_opts": ["https://code.videolan.org/videolan/dav1d/-/archive/1.0.0/dav1d-1.0.0.tar.gz",
-            "dav1d-1.0.0.tar.gz"],
-        "folder_name": "dav1d_build"
-    },
-    "libfdk-aac":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://github.com/mstorsjo/fdk-aac/archive/refs/tags/v2.0.2.tar.gz",
-            "fdk-aac-2.0.2.tar.gz"],
-        "folder_name": "fdk-aac-2.0.2"
-    },
-    "libfontconfig":{
-        "configure_opts": ["--disable-shared", "--enable-static", "--disable-docs"],
-        "dependencies": ["libfreetype"],
-        "download_opts": ["https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.1.tar.xz",
-            "fontconfig-2.14.1.tar.xz"],
-        "folder_name": "fontconfig-2.14.1"
-    },
-    "libfreetype":{
-        "configure_opts": ["--disable-shared", "--enable-static", "--with-bzip2=no", "--with-png=no", "--with-harfbuzz=no", "--with-brotli=no", "--with-librsvg=no"],
-        "download_opts": ["https://download.savannah.gnu.org/releases/freetype/freetype-2.12.1.tar.xz",
-            "freetype-2.12.1.tar.xz"],
-        "folder_name": "freetype-2.12.1"
-    },
-    "libfribidi":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://github.com/fribidi/fribidi/releases/download/v1.0.12/fribidi-1.0.12.tar.xz",
-            "fribidi-1.0.12.tar.xz"],
-        "folder_name": "fribidi-1.0.12"
-    },
-    "libmp3lame":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://codeload.github.com/openstreamcaster/lame/zip/master",
-            "lame-master.zip"],
-        "folder_name": "lame-master"
-    },
-    "libkvazaar":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://github.com/ultravideo/kvazaar/releases/download/v2.1.0/kvazaar-2.1.0.tar.xz",
-            "kvazaar-2.1.0.tar.xz"],
-        "folder_name": "kvazaar-2.1.0"
-    },
-    "libogg":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["http://downloads.xiph.org/releases/ogg/libogg-1.3.5.tar.gz",
-            "libogg-1.3.5.tar.gz"],
-        "folder_name": "libogg-1.3.5"
-    },
-    "libopencore":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://downloads.sourceforge.net/project/opencore-amr/opencore-amr/opencore-amr-0.1.6.tar.gz",
-            "opencore-amr-0.1.6.tar.gz"],
-        "folder_name": "opencore-amr-0.1.6"
-    },
-    "libopenh264":{
-        "configuration": "meson",
-        "configure_opts": ["--default-library=static"],
-        "download_opts": ["https://github.com/cisco/openh264/archive/refs/tags/v2.3.1.tar.gz",
-            "v2.3.1.tar.gz"],
-        "folder_name": "openh264_build"
-    },
-    "libopus":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz",
-            "opus-1.3.1.tar.gz"],
-        "folder_name": "opus-1.3.1"
-    },
-    "libsdl":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://github.com/libsdl-org/SDL/releases/download/release-2.24.2/SDL2-2.24.2.tar.gz",
-            "SDL2-2.24.2.tar.gz"],
-        "folder_name": "SDL2-2.24.2"
-    },
-    "libsoxr":{
-        "configuration": "cmake",
-        "configure_opts": ["-DBUILD_SHARED_LIBS=off", "."],
-        "download_opts": ["https://github.com/chirlu/soxr/archive/refs/tags/0.1.3.tar.gz",
-            "0.1.3.tar.gz"],
-        "folder_name": "soxr-0.1.3"
-    },
-    "libsrt":{
-        "configuration": "cmake",
-        "configure_opts": ["-DENABLE_SHARED=off"],
-        "download_opts": ["https://github.com/Haivision/srt/archive/refs/tags/v1.5.1.tar.gz",
-            "v1.5.1.tar.gz"],
-        "folder_name": "srt-1.5.1"
-    },
-    "libsvtav1":{
-        "configuration": "cmake",
-        "configure_opts": ["-DBUILD_DEC=OFF", "-DBUILD_SHARED_LIBS=OFF"],
-        "download_opts": ["https://gitlab.com/AOMediaCodec/SVT-AV1/-/archive/v1.3.0/SVT-AV1-v1.3.0.tar.gz",
-            "SVT-AV1-v1.3.0.tar.gz"],
-        "folder_name": "SVT-AV1-v1.3.0"
-    },
-    "libtheora":{
-        "configure_opts": ["--disable-shared", "--enable-static", "--disable-oggtest", "--disable-vorbistest", "--disable-examples", "--disable-asm", "--disable-spec"],
-        "dependencies": ["libogg","libvorbis"],
-        "download_opts": ["http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2",
-            "libtheora-1.1.1.tar.bz"],
-        "folder_name": "libtheora-1.1.1"
-    },
-    "libtasn1":{
-        "configure_opts": ["--disable-shared", "--enable-static", "--disable-doc"],
-        "download_opts": ["https://ftp.gnu.org/gnu/libtasn1/libtasn1-4.19.0.tar.gz",
-            "libtasn1-4.19.0.tar.gz"],
-        "folder_name": "libtasn1-4.19.0"
-    },
-    "libudfread":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://code.videolan.org/videolan/libudfread/-/archive/1.1.2/libudfread-1.1.2.tar.gz",
-            "libudfread-1.1.2.tar.gz"],
-        "folder_name": "libudfread-1.1.2"
-    },
-    "libunistring":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://ftp.gnu.org/gnu/libunistring/libunistring-1.1.tar.xz",
-            "libunistring-1.1.tar.xz"],
-        "folder_name": "libunistring-1.1"
-    },
-    "libvidstab":{
-        "configuration": "cmake",
-        "configure_opts": ["-DBUILD_SHARED_LIBS=OFF", "-DUSE_OMP=OFF", "-DENABLE_SHARED=off", "."],
-        "download_opts": ["https://github.com/georgmartius/vid.stab/archive/v1.1.0.tar.gz",
-            "vidstab-1.1.0.tar.gz"],
-        "folder_name": "vid.stab-1.1.0"
-    },
-    "libvmaf": {
-        "configuration": "meson",
-        "configure_opts": ["--default-library=static", "libvmaf"],
-        "download_opts": ["https://github.com/Netflix/vmaf/archive/refs/tags/v2.3.1.tar.gz",
-            "v2.3.1.tar.gz"],
-        "folder_name": "vmaf-2.3.1"
-    },
-    "libvorbis":{
-        "configure_opts": ["--disable-shared", "--enable-static", "--disable-oggtest"],
-        "dependencies": ["libogg"],
-        "download_opts": ["http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.7.tar.gz",
-            "libvorbis-1.3.7.tar.gz"],
-        "folder_name": "libvorbis-1.3.7"
-    },
-    "libvpx":{
-        "configure_opts": ["--disable-shared", "--disable-unit-tests", "--disable-examples", "--enable-vp9-highbitdepth"],
-        "download_opts": ["https://github.com/webmproject/libvpx/archive/refs/tags/v1.12.0.tar.gz",
-            "libvpx-1.12.0.tar.gz"],
-        "folder_name": "libvpx-1.12.0"
-    },
-    "libx264":{
-        "configure_opts": ["--enable-static", "--enable-pic"],
-        "download_opts": ["https://code.videolan.org/videolan/x264/-/archive/stable/x264-stable.tar.gz",
-            "x264-stable.tar.gz"],
-        "folder_name": "x264-stable"
-    },
-    "libx265":{
-        "configuration": "cmake",
-        "configure_opts": ["-DENABLE_SHARED=off", "."],
-        "download_opts": ["https://bitbucket.org/multicoreware/x265_git/downloads/x265_3.5.tar.gz",
-            "x265_3.5.tar.gz"],
-        "folder_name": ["x265_3.5", "source"]
-    },
-    "libxvid":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://downloads.xvid.com/downloads/xvidcore-1.3.7.tar.gz",
-            "xvidcore-1.3.7.tar.gz"],
-        "folder_name": ["xvidcore", "build", "generic"]
-    },
-    "libzimg":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://github.com/sekrit-twc/zimg/archive/refs/tags/release-3.0.4.tar.gz",
-            "zimg-3.0.4.tar.gz"],
-        "folder_name": "zimg-release-3.0.4"
-    },
-    "nettle":{
-        "configure_opts": ["--disable-shared", "--enable-static", "--disable-documentation"],
-        "dependencies": ['gmp'],
-        "download_opts": ["https://ftp.gnu.org/gnu/nettle/nettle-3.8.1.tar.gz",
-            "nettle-3.8.1.tar.gz"],
-        "folder_name": "nettle-3.8.1"
-    },
-    "openssl":{
-        "configure_opts": [],
-        "download_opts": ["https://www.openssl.org/source/openssl-1.1.1s.tar.gz",
-            "openssl-1.1.1s.tar.gz"],
-        "folder_name": "openssl-1.1.1s"
-    },
-    "pkg-config":{
-        "configure_opts": ["--silent", "--with-internal-glib"],
-        "download_opts": ["http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar.gz",
-            "pkg-config-0.29.2.tar.gz"],
-        "folder_name": "pkg-config-0.29.2"
-    },
-    "nasm":{
-        "configure_opts": ["--disable-shared", "--enable-static"],
-        "download_opts": ["https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/nasm-2.15.05.tar.xz",
-            "nasm.tar.gz"],
-        "folder_name": "nasm-2.15.05"
-    },
-    "yasm":{
-        "download_opts": ["http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz",
-            "yasm-1.3.0.tar.gz"],
-        "folder_name": "yasm-1.3.0"
-    },
-    "zlib":{
-        "configure_opts": ["--static"],
-        "download_opts": ["https://www.zlib.net/zlib-1.2.13.tar.xz",
-            "zlib-1.2.13.tar.xz"],
-        "folder_name": "zlib-1.2.13",
-    }
-}
+from typing import Optional, Iterable
 # Set up constants
 DOWNLOAD_RETRY_DELAY = 3
 DOWNLOAD_RETRY_ATTEMPTS = 3
@@ -289,7 +8,19 @@ DOWNLOAD_RETRY_ATTEMPTS = 3
 BOLD_SEPARATOR = "======================================="
 ITALIC_SEPARATOR = "---------------------------------------"
 
-def lookahead(iterable):
+def lookahead(iterable: Iterable):
+    """
+    Lookahead function
+
+    Parameters
+    ----------
+    iterable: Iterable
+        Iterable value
+
+    Returns
+    -------
+    None
+    """
     it=iter(iterable)
     for value in it:
         try:
@@ -297,28 +28,56 @@ def lookahead(iterable):
         except StopIteration:
             yield value, False
 
-def print_lines(*strings):
+def print_lines(*strings) -> None:
+    """
+    Print strings line by line
+
+    Parameters
+    ----------
+    *strings
+        List of string
+
+    Returns
+    -------
+    None
+    """
     to_print = ""
     for line, has_more in lookahead(strings):
-        to_print = to_print + line + (os.linesep if has_more else "")
+        to_print = to_print + line + ("\n" if has_more else "")
     print(to_print)
 
+def print_header(*strings) -> None:
+    """
+    Print strings with italic separator and line by line
 
-def print_header(*strings):
+    Parameters
+    ----------
+    *strings
+        List of string
+
+    Returns
+    -------
+    None
+    """
     to_print = strings + (ITALIC_SEPARATOR,)
     print_lines(*to_print)
 
+def print_block(*strings) -> None:
+    """
+    Print strings with bold separator and line by line
 
-def print_block(*strings):
+    Parameters
+    ----------
+    *strings
+        List of string
+
+    Returns
+    -------
+    None
+    """
     to_print = strings + (BOLD_SEPARATOR,)
     print_lines(*to_print)
-    print("")
-
-
-def print_p(*strings):
-    to_print = strings
-    print_lines(*to_print)
-    print("")
+    print()
 
 # Please note that neat features of Plumbum like FG, BG and TEE are not working on Windows.
 # Especially TEE that runs `select` against new processes.
@@ -568,7 +327,8 @@ class Builder:
     Class to build ffmpeg
     """
     def __init__(self,
-            os_type,
+            library_data: dict,
+            os_type: str,
             target_dir: str="targets",
             release_dir: str="release",
             bin_dir: str="bin",
@@ -589,6 +349,7 @@ class Builder:
                 'post_configure': self.__post_configure,
                 'post_install': self.__post_install,
             }
+        self.__library_data=library_data
         self.__is_slavery=False
         self.__old_ldflags=None
         self.__os_type=os_type
@@ -673,15 +434,15 @@ class Builder:
         if lib in ('libogg', 'libsdl', "libudfread"):
             return
         if lib == 'libopencore':
-            LIBRARIES['ffmpeg']['configure_opts'].extend([
+            self.__library_data['ffmpeg']['configure_opts'].extend([
                 "--enable-libopencore_amrnb",
                 "--enable-libopencore_amrwb"
             ])
             return
         #Cuurrenty an issue in libvmaf also requires FFmpeg to be built with --ld="g++" for a static build to succeed.
         if lib == 'libvmaf':
-            LIBRARIES['ffmpeg']['configure_opts'].append("--ld=\"g++\"")
-        LIBRARIES['ffmpeg']['configure_opts'].append(f"--enable-{lib}")
+            self.__library_data['ffmpeg']['configure_opts'].append("--ld=\"g++\"")
+        self.__library_data['ffmpeg']['configure_opts'].append(f"--enable-{lib}")
         return
 
     def __configuration_handler(self, threads: int, silent: bool, library: str) -> bool:
@@ -704,14 +465,17 @@ class Builder:
         if library == "ffmpeg-windows-deps-master":
             fg("cp", "-f", "./*", f"{self.release_dir}/bin")
             return True
+        if library == 'ffnvcodec':
+            install(f"PREFIX={self.release_dir}", silent=silent)
+            return True
         if library == 'libx264' and self.is_linux:
             with local.env(CXXFLAGS="-fPIC"):
-                self.configure(*LIBRARIES['libx264'].get("configure_opts", []), silent=silent)
+                self.configure(*self.__library_data['libx264'].get("configure_opts", []), silent=silent)
                 return False
         if library == 'openssl':
             if not fg("bash",
                 "./config",
-                *LIBRARIES['openssl'].get("configure_opts", [])):
+                *self.__library_data['openssl'].get("configure_opts", [])):
                 sys_exit(1)
             make(threads, silent=silent)
             fg("make", "install_sw", f"-j{threads}")
@@ -735,20 +499,20 @@ class Builder:
                     make(threads, "-f", "./win32/Makefile.gcc")
                     install("-f", "./win32/Makefile.gcc")
                     return True
-            self.configure(*LIBRARIES['zlib'].get("configure_opts", []), silent=silent)
+            self.configure(*self.__library_data['zlib'].get("configure_opts", []), silent=silent)
             make(threads, silent=silent)
             install(silent=silent)
             return True
 
-        if LIBRARIES[library].get("configuration", "configure") == "meson":
-            self.meson(*LIBRARIES[library].get("configure_opts", []), silent=silent)
+        if self.__library_data[library].get("configuration", "configure") == "meson":
+            self.meson(*self.__library_data[library].get("configure_opts", []), silent=silent)
             fg("ninja", "-j", threads, silent=silent)
             fg("ninja", "install")
             return True
-        if LIBRARIES[library].get("configuration", "configure") == "cmake":
-            self.cmake(*LIBRARIES[library].get("configure_opts", []), silent=silent)
+        if self.__library_data[library].get("configuration", "configure") == "cmake":
+            self.cmake(*self.__library_data[library].get("configure_opts", []), silent=silent)
             return False
-        self.configure(*LIBRARIES[library].get("configure_opts", []), silent=silent)
+        self.configure(*self.__library_data[library].get("configure_opts", []), silent=silent)
         return False
 
     def __pre_dependency(self, lib: str) -> None:
@@ -766,24 +530,24 @@ class Builder:
         """
         if lib == 'harfbuzz':
             if 'libfreetype' in self.__targets:
-                LIBRARIES['harfbuzz']['configure_opts'].append("--with-freetype=yes")
-                LIBRARIES['harfbuzz']["dependencies"]=['libfreetype']
+                self.__library_data['harfbuzz']['configure_opts'].append("--with-freetype=yes")
+                self.__library_data['harfbuzz']["dependencies"]=['libfreetype']
                 return
-            LIBRARIES['harfbuzz']['configure_opts'].append("--with-freetype=no")
+            self.__library_data['harfbuzz']['configure_opts'].append("--with-freetype=no")
 
         elif lib == 'libfreetype':
             if 'zlib' in self.__targets:
-                LIBRARIES['libfreetype']['configure_opts'].append("--with-zlib=yes")
-                LIBRARIES['libfreetype']["dependencies"]=['zlib']
+                self.__library_data['libfreetype']['configure_opts'].append("--with-zlib=yes")
+                self.__library_data['libfreetype']["dependencies"]=['zlib']
                 return
-            LIBRARIES['libfreetype']['configure_opts'].append("--with-zlib=no")
+            self.__library_data['libfreetype']['configure_opts'].append("--with-zlib=no")
 
         elif lib == 'libsrt':
             if 'gnutls' in self.__targets:
-                LIBRARIES['libsrt']["dependencies"]=['gnutls']
+                self.__library_data['libsrt']["dependencies"]=['gnutls']
                 return
             if 'openssl' in self.__targets:
-                LIBRARIES['libsrt']["dependencies"]=['openssl']
+                self.__library_data['libsrt']["dependencies"]=['openssl']
                 return
 
     def __post_download(self, lib: str) -> None:
@@ -800,13 +564,13 @@ class Builder:
         None
         """
         if lib == "libaom":
-            mkdir(self.target_dir, LIBRARIES['libaom']['folder_name'])
+            mkdir(self.target_dir, self.__library_data['libaom']['folder_name'])
 
         elif lib == 'libopenh264':
-            mkdir(self.target_dir, LIBRARIES['libopenh264']['folder_name'])
+            mkdir(self.target_dir, self.__library_data['libopenh264']['folder_name'])
 
         elif lib == 'libdav1d':
-            mkdir(self.target_dir, LIBRARIES['libdav1d']['folder_name'])
+            mkdir(self.target_dir, self.__library_data['libdav1d']['folder_name'])
 
     def __pre_configure(self, lib: str) -> None:
         """
@@ -826,7 +590,7 @@ class Builder:
             (local["perl"][ "-p", "-i", "-e", "s/get_filename_component.JNIPATH/#get_filename_component(JNIPATH/g", "Tests/CMakeLists.txt"])()
 
         elif lib == 'ffmpeg':
-            LIBRARIES['ffmpeg']['configure_opts'].extend([
+            self.__library_data['ffmpeg']['configure_opts'].extend([
                 *self.__ffmpeg_opts,
                 # f"--bindir={self.path_fixer(self.release_dir)}/bin"
                 # f"--libdir={self.path_fixer(self.release_dir)}/lib",
@@ -834,26 +598,24 @@ class Builder:
                 f"--extra-cflags=-I{self.path_fixer(self.release_dir)}/include",
                 f"--extra-ldflags=-L{self.path_fixer(self.release_dir)}/lib -fstack-protector"
             ])
-            for ffmpeg_lib in LIBRARIES:
-                if ffmpeg_lib.startswith("lib") or ffmpeg_lib in ("gmp", "openssl", "zlib"):
+            for ffmpeg_lib in self.__library_data:
+                if ffmpeg_lib.startswith("lib") or ffmpeg_lib in ("gmp", "openssl", "zlib", "ffnvcodec"):
                     if ffmpeg_lib in self.__targets:
                         self.__add_ffmpeg_lib(ffmpeg_lib)
 
-            if 'gmp' in self.__targets:
-                LIBRARIES['ffmpeg']['configure_opts'].append('--enable-gmp')
-
             if 'libsdl' in self.__targets:
-                LIBRARIES['ffmpeg']['configure_opts'].append('--enable-ffplay')
+                self.__library_data['ffmpeg']['configure_opts'].append('--enable-ffplay')
 
             if not self.__is_slavery and 'gnutls' in self.__targets:
                 print("Applying free replacements for non-free components")
-                LIBRARIES['ffmpeg']['configure_opts'].append("--enable-gnutls")
+                self.__library_data['ffmpeg']['configure_opts'].append("--enable-gnutls")
 
             elif self.__is_slavery:
-                print_p("You are applying dirty non-free attachments. Are you sure you need this?",
+                print_lines("You are applying dirty non-free attachments. Are you sure you need this?",
                         "Now you can't distribute this FFmpeg build to anyone, so it's almost useless in real products.",
                         "You can't sell or give away these files")
-                LIBRARIES['ffmpeg']['configure_opts'].append("--enable-nonfree")
+                print()
+                self.__library_data['ffmpeg']['configure_opts'].append("--enable-nonfree")
                     # Non-free unfortunately
                     # Should be replaced with gnutls
                     # http://www.iiwnz.com/compile-ffmpeg-with-rtmps-for-facebook
@@ -863,23 +625,23 @@ class Builder:
             # Unfortunately even creators of MSYS2 can't build it with --enable-pthreads :(
             # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-ffmpeg/PKGBUILD
             if not self.is_windows:
-                LIBRARIES['ffmpeg']['configure_opts'].extend(["--extra-libs=-lpthread", "--enable-pthreads"])
+                self.__library_data['ffmpeg']['configure_opts'].extend(["--extra-libs=-lpthread", "--enable-pthreads"])
 
         elif lib == "libaom":
             # TODO: Don't forget about different kinds of cmake (msys/cmake and mingw/cmake)
-            LIBRARIES['libaom']['configure_opts'].append(f"{self.target_dir}/aom")
+            self.__library_data['libaom']['configure_opts'].append(f"{self.target_dir}/aom")
 
         elif lib == 'libbluray':
             fg("autoreconf", "-fiv")
 
         elif lib == 'libdav1d':
-            LIBRARIES['libdav1d']['configure_opts'].extend([f"--libdir={self.release_dir}/lib", f"{self.target_dir}/dav1d-{re_findall('dav1d-(.+).tar', LIBRARIES['libdav1d']['download_opts'][1])[0]}"])
+            self.__library_data['libdav1d']['configure_opts'].extend([f"--libdir={self.release_dir}/lib", f"{self.target_dir}/dav1d-{re_findall('dav1d-(.+).tar', self.__library_data['libdav1d']['download_opts'][1])[0]}"])
 
         elif lib == 'libfdk-aac':
             fg("autoreconf", "-fiv")
 
         elif lib == 'libopenh264':
-            LIBRARIES['libopenh264']['configure_opts'].extend([f"--libdir={self.release_dir}/lib",f"{self.target_dir}/openh264-{re_findall('v(.+).tar', LIBRARIES['libopenh264']['download_opts'][1])[0]}"])
+            self.__library_data['libopenh264']['configure_opts'].extend([f"--libdir={self.release_dir}/lib",f"{self.target_dir}/openh264-{re_findall('v(.+).tar', self.__library_data['libopenh264']['download_opts'][1])[0]}"])
 
         elif lib == 'libopus':
             # On Windows, there's a huge problem.
@@ -900,12 +662,12 @@ class Builder:
 
         elif lib == 'libsrt':
             if 'openssl' in self.__targets:
-                LIBRARIES['libsrt']['configure_opts'].append("-DOPENSSL_USE_STATIC_LIBS=on")
+                self.__library_data['libsrt']['configure_opts'].append("-DOPENSSL_USE_STATIC_LIBS=on")
                 return
             if 'gnutls' in self.__targets:
-                LIBRARIES['libsrt']['configure_opts'].append("-DUSE_ENCLIB=gnutls")
+                self.__library_data['libsrt']['configure_opts'].append("-DUSE_ENCLIB=gnutls")
                 return
-            LIBRARIES['libsrt']['configure_opts'].append("-DENABLE_ENCRYPTION=off")
+            self.__library_data['libsrt']['configure_opts'].append("-DENABLE_ENCRYPTION=off")
 
         elif lib == 'libtheora':
             print("Removing --fforce-adr from configure")
@@ -913,7 +675,7 @@ class Builder:
             fg("chmod", "+x", "configure.patched")
             fg("mv", "configure.patched", "configure")
             print("Configure processing done.")
-            LIBRARIES['libtheora']['configure_opts'].extend([
+            self.__library_data['libtheora']['configure_opts'].extend([
                 f"--with-ogg-libraries={self.release_dir}/lib",
                 f"--with-ogg-includes={self.release_dir}/include/",
                 f"--with-vorbis-libraries={self.release_dir}/lib",
@@ -924,10 +686,10 @@ class Builder:
             fg("autoreconf", "-fiv")
 
         elif lib == 'libvmaf':
-            LIBRARIES['libvmaf']['configure_opts'].append(f"--libdir={self.release_dir}/lib")
+            self.__library_data['libvmaf']['configure_opts'].append(f"--libdir={self.release_dir}/lib")
 
         elif lib == 'libvorbis':
-            LIBRARIES['libvorbis']['configure_opts'].extend([
+            self.__library_data['libvorbis']['configure_opts'].extend([
                 f"--with-ogg-libraries={self.path_fixer(self.release_dir)}/lib",
                 f"--with-ogg-includes={self.path_fixer(self.release_dir)}/include"
             ])
@@ -942,7 +704,7 @@ class Builder:
             fg("autoreconf", "-fiv")
 
         elif lib == 'openssl':
-            LIBRARIES['openssl']['configure_opts'].extend([
+            self.__library_data['openssl']['configure_opts'].extend([
                 f"--prefix={self.path_fixer(self.release_dir)}",
                 f"--openssldir={self.path_fixer(self.release_dir)}",
                 f"--with-zlib-include={self.path_fixer(self.release_dir)}/include/",
@@ -952,7 +714,7 @@ class Builder:
             ])
 
         elif lib == 'pkg-config':
-            LIBRARIES['pkg-config']['configure_opts'].append(f"--with-pc-path={self.release_dir}/lib/pkgconfig")
+            self.__library_data['pkg-config']['configure_opts'].append(f"--with-pc-path={self.release_dir}/lib/pkgconfig")
 
     def __post_configure(self, lib: str) -> None:
         """
@@ -1003,9 +765,9 @@ class Builder:
         """
         if lib == 'gnutls':
             #Fix static linking issue
-            with open(f"{self.release_dir}/lib/pkgconfig/gnutls.pc") as f:
+            with open(f"{self.release_dir}/lib/pkgconfig/gnutls.pc", encoding="utf-8") as f:
                 value=f.read()
-            with open(f"{self.release_dir}/lib/pkgconfig/gnutls.pc", "w") as f:
+            with open(f"{self.release_dir}/lib/pkgconfig/gnutls.pc", "w", encoding="utf-8") as f:
                 f.write(value.replace("Libs: -L${libdir} -lgnutls", "Libs: -L${libdir} -lgnutls -ltasn1 -lgmp -lunistring -lnettle -lhogweed"))
 
         elif lib == 'libx265':
@@ -1022,23 +784,24 @@ class Builder:
 
         elif lib == 'nettle':
             #Fix static linking issue
-            with open(f"{self.release_dir}/lib/pkgconfig/nettle.pc") as f:
+            with open(f"{self.release_dir}/lib/pkgconfig/nettle.pc", encoding="utf-8") as f:
                 value=f.read()
-            with open(f"{self.release_dir}/lib/pkgconfig/nettle.pc", "w") as f:
+            with open(f"{self.release_dir}/lib/pkgconfig/nettle.pc", "w", encoding="utf-8") as f:
                 f.write(value.replace("Libs: -L${libdir} -lnettle", "Libs: -L${libdir} -lnettle -lgmp"))
 
         elif lib == 'openssl':
             #Fix static linking issue
-            with open(f"{self.release_dir}/lib/pkgconfig/libcrypto.pc") as f:
+            with open(f"{self.release_dir}/lib/pkgconfig/libcrypto.pc", encoding="utf-8") as f:
                 value=f.read()
-            with open(f"{self.release_dir}/lib/pkgconfig/libcrypto.pc", "w") as f:
+            with open(f"{self.release_dir}/lib/pkgconfig/libcrypto.pc", "w", encoding="utf-8") as f:
                 f.write(value.replace("Libs: -L${libdir} -lcrypto", "Libs: -L${libdir} -lcrypto -lz -ldl"))
 
     def __build_library(self,
             library: str,
             threads: int,
             is_dependency=False,
-            silent: bool=False) -> None:
+            silent: bool=False
+        ) -> None:
         """
         This function will handle the build process
 
@@ -1060,14 +823,14 @@ class Builder:
         if not self.is_needed(library) and not is_dependency:
             return
         self.__event['pre_dependency'](library)
-        if len(LIBRARIES[library].get('dependencies', [])) != 0:
-            for dependency in LIBRARIES[library]['dependencies']:
+        if len(self.__library_data[library].get('dependencies', [])) != 0:
+            for dependency in self.__library_data[library]['dependencies']:
                 if not self.is_already_build(dependency):
                     self.__build_library(dependency, threads, is_dependency=True)
 
-        self.download(*LIBRARIES[library]['download_opts'])
+        self.download(*self.__library_data[library]['download_opts'])
         self.__event['post_download'](library)
-        with self.target_cwd(*LIBRARIES[library]['folder_name'] if isinstance(LIBRARIES[library]['folder_name'], list) else [LIBRARIES[library]['folder_name']]):
+        with self.target_cwd(*self.__library_data[library]['folder_name'] if isinstance(self.__library_data[library]['folder_name'], list) else [self.__library_data[library]['folder_name']]):
             self.__event['pre_configure'](library)
             if not self.__configuration_handler(threads, silent, library):
                 self.__event['post_configure'](library)
@@ -1425,7 +1188,7 @@ def main() -> None:
     parser.add_argument('-c', '--clean', action="store_true", dest="clean_mode", help='Clean solution')
     parser.add_argument('-q', '--silent', action="store_true", dest="silent_mode", help='Disable build debug')
     parser.add_argument('--targets', action="store", dest="targets",
-                    help='comma-separated targets for building (empty = build all)')
+        help='comma-separated targets for building (empty = build all)')
     parser.add_argument('--exclude-targets', action="store", dest="exclude_targets", help='Don\'t build these')
     parser.add_argument('--extra-cflags', metavar='string', dest="extra_cflags", help='Build extra CFLAGS', default="")
     parser.add_argument('--extra-ldflags', metavar='string', dest="extra_ldflags", help='Build extra LDFLAGS', default="")
@@ -1437,8 +1200,8 @@ def main() -> None:
     parser.add_argument('--use-system-build-tools', dest="default_tools", action='store_true', help="Use cmake, nasm, yasm, pkg-config that installed on system", default=False)
     args = parser.parse_args()
 
-    targets=['cmake', 'gmp', 'gnutls', 'libaom', 'libass', 'libbluray', 'libdav1d', 'libfdk-aac', 'libfontconfig', 'libfreetype',
-             'libfribidi', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore', 'libopenh264', 'libsdl', 'libsoxr', 'libsrt',
+    targets=['cmake', 'ffnvcodec', 'gmp', 'gnutls', 'libaom', 'libass', 'libbluray', 'libdav1d', 'libfdk-aac', 'libfontconfig', 'libfreetype',
+             'libfribidi', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore', 'libopenh264', 'libsdl', 'libshine', 'libsoxr', 'libsrt',
              'libsvtav1', 'libtheora', 'libvidstab', 'libvmaf', 'libvorbis', 'libvpx', 'libx264', 'libx265', 'libxvid',
              'libzimg', 'nasm', 'openssl', 'pkg-config', 'yasm', 'zlib', 'ffmpeg-msys2-deps', 'ffmpeg'
             ]
@@ -1452,33 +1215,31 @@ def main() -> None:
     targets = [x for x in targets if x not in ('libfdk-aac', 'openssl')] if not args.slavery_mode else targets
     if 'libsdl' in targets and args.disable_ffplay:
         targets.remove('libsdl')
-    if not bool(command_exists("meson") and command_exists("ninja")) and any(_ in targets for _ in ("libopenh264", "libdav1d")):
-        print("Building libdav1d and libopenh264 now disabled. Meson and ninja weren\'t installed.\nInstall them with `pip install meson ninja`")
-        for _ in ('libdav1d', 'libopenh264'):
-            try:
-                targets.remove(_)
-            except ValueError:
-                pass
+    if not bool(command_exists("meson") and command_exists("ninja")):
+        if any(_ in targets for _ in ("libopenh264", "libdav1d")):
+            print("In order to build libopenh264 or libdav1d, you must install meson and ninja in your system")
+            sys_exit(1)
 
     print_block("Hello, slave, how are you?" if args.slavery_mode else "Building FFmpeg, free as in freedom!")
     print_header("Processing targets:")
     print_block(str(targets))
 
     if args.build_mode:
-        require_commands("autoconf", "libtoolize", "make", "curl", "tar", 'gperf',*['cmake', 'nasm', 'yasm', 'pkg-config'] if args.default_tools else [])
+        require_commands("autoconf", 'curl', 'gperf', 'libtoolize', 'make', 'tar',*['cmake', 'nasm', 'yasm', 'pkg-config'] if args.default_tools else [])
         os_type=system()
         kwargs={}
         if args.jobs is not None:
             kwargs={"threads": args.jobs}
-        Builder(os_type, target_dir=args.target_dir, release_dir=args.release_dir).build(
-            targets,
-            is_slavery_mode=args.slavery_mode,
-            silent=args.silent_mode,
-            extra_cflags=args.extra_cflags,
-            extra_ldflags=args.extra_ldflags,
-            extra_ffmpeg_args=args.ffmpeg_args,
-            **kwargs
-        )
+        with open("libraries.json", encoding="utf-8") as f:
+            Builder(load(f), os_type, target_dir=args.target_dir, release_dir=args.release_dir).build(
+                targets,
+                is_slavery_mode=args.slavery_mode,
+                silent=args.silent_mode,
+                extra_cflags=args.extra_cflags,
+                extra_ldflags=args.extra_ldflags,
+                extra_ffmpeg_args=args.ffmpeg_args,
+                **kwargs
+            )
 
     if args.clean_mode:
         clean_all(args.target_dir, args.release_dir)
@@ -1498,6 +1259,7 @@ if __name__ == '__main__':
     from shutil import rmtree
     from re import findall as re_findall
     from sys import exit as sys_exit
+    from json import load
 
     try:
         from plumbum import local, FG, CommandNotFound
