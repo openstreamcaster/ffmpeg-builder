@@ -149,6 +149,12 @@
             "SDL2-2.24.2.tar.gz"],
         "folder_name": "SDL2-2.24.2"
     },
+    "libshine":{
+        "configure_opts": ["--enable-static", "--disable-shared"],
+        "download_opts": ["https://github.com/toots/shine/releases/download/3.1.1/shine-3.1.1.tar.gz",
+            "shine-3.1.1.tar.gz"],
+        "folder_name": "shine-3.1.1"
+    },
     "libsoxr":{
         "configuration": "cmake",
         "configure_opts": ["-DBUILD_SHARED_LIBS=off", "."],
