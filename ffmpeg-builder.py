@@ -8,6 +8,22 @@ DOWNLOAD_RETRY_ATTEMPTS = 3
 BOLD_SEPARATOR = "======================================="
 ITALIC_SEPARATOR = "---------------------------------------"
 
+def grep(filename: str, text: str):
+    with open(filename) as file:
+        for index, value in enumerate(file.readlines()):
+            if text == value.strip():
+                file.close()
+                return index
+
+def delete_lines(filename: str, start: int, end: int):
+    with open(filename) as fRead:
+        file_read=fRead.readlines()
+        with open(filename, "w") as fWrite:
+            for index, value in enumerate(file_read):
+                if index < start or index > end:
+                    fWrite.write(value)
+        fWrite.close()
+
 def lookahead(iterable: Iterable):
     """
     Lookahead function
@@ -351,6 +367,7 @@ class Builder:
             }
         self.__library_data=library_data
         self.__is_slavery=False
+        self.__is_static_ffmpeg=False
         self.__old_ldflags=None
         self.__os_type=os_type
         self.__targets=[]
@@ -371,7 +388,7 @@ class Builder:
         Returns
         -------
         str
-            Returnr release dir
+            Return release dir
         """
         return self.__dir_data['release_dir']
 
@@ -441,7 +458,7 @@ class Builder:
             return
         #Cuurrenty an issue in libvmaf also requires FFmpeg to be built with --ld="g++" for a static build to succeed.
         if lib == 'libvmaf':
-            self.__library_data['ffmpeg']['configure_opts'].append("--ld=\"g++\"")
+            self.__library_data['ffmpeg']['configure_opts'].append("--ld=g++")
         self.__library_data['ffmpeg']['configure_opts'].append(f"--enable-{lib}")
         return
 
@@ -468,6 +485,12 @@ class Builder:
         if library == 'ffnvcodec':
             install(f"PREFIX={self.release_dir}", silent=silent)
             return True
+        if library == "libass":
+            with local.env(
+                CFLAGS=f"{local.env.get('CFLAGS', '')} -I{self.release_dir}/include/harfbuzz",
+                ):
+                    self.configure(*self.__library_data[library].get("configure_opts", []), silent=silent)
+                    return False
         if library == 'libx264' and self.is_linux:
             with local.env(CXXFLAGS="-fPIC"):
                 self.configure(*self.__library_data['libx264'].get("configure_opts", []), silent=silent)
@@ -572,6 +595,9 @@ class Builder:
         elif lib == 'libdav1d':
             mkdir(self.target_dir, self.__library_data['libdav1d']['folder_name'])
 
+        elif lib == 'libgme':
+            mkdir(self.target_dir, *self.__library_data['libgme']['folder_name'])
+
     def __pre_configure(self, lib: str) -> None:
         """
         This function will executed before configure
@@ -590,14 +616,19 @@ class Builder:
             (local["perl"][ "-p", "-i", "-e", "s/get_filename_component.JNIPATH/#get_filename_component(JNIPATH/g", "Tests/CMakeLists.txt"])()
 
         elif lib == 'ffmpeg':
+            cflags_extra=" -static -static-libstdc++ -static-libgcc " if self.__is_static_ffmpeg else ''
+            ldflags_extra=" -static -static-libstdc++ -static-libgcc " if self.__is_static_ffmpeg else ''
             self.__library_data['ffmpeg']['configure_opts'].extend([
                 *self.__ffmpeg_opts,
                 # f"--bindir={self.path_fixer(self.release_dir)}/bin"
                 # f"--libdir={self.path_fixer(self.release_dir)}/lib",
                 f"--pkgconfigdir={self.path_fixer(self.release_dir)}/lib/pkgconfig",
-                f"--extra-cflags=-I{self.path_fixer(self.release_dir)}/include",
-                f"--extra-ldflags=-L{self.path_fixer(self.release_dir)}/lib -fstack-protector"
+                f"--extra-cflags=-I{self.path_fixer(self.release_dir)}/include {cflags_extra}",
+                f"--extra-ldflags=-L{self.path_fixer(self.release_dir)}/lib -fstack-protector {ldflags_extra}"
             ])
+            if self.__is_static_ffmpeg:
+                self.__library_data['ffmpeg']['configure_opts'].extend(["--extra-cxxflags=-static -static-libstdc++ -static-libgcc ","--extra-libs=-ldl -lrt -lpthread"])
+
             for ffmpeg_lib in self.__library_data:
                 if ffmpeg_lib.startswith("lib") or ffmpeg_lib in ("gmp", "openssl", "zlib", "ffnvcodec"):
                     if ffmpeg_lib in self.__targets:
@@ -626,6 +657,8 @@ class Builder:
             # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-ffmpeg/PKGBUILD
             if not self.is_windows:
                 self.__library_data['ffmpeg']['configure_opts'].extend(["--extra-libs=-lpthread", "--enable-pthreads"])
+            if 'libsoxr' in self.__targets:
+                self.__library_data['ffmpeg']['configure_opts'].append("--extra-libs=-lgomp")
 
         elif lib == "libaom":
             # TODO: Don't forget about different kinds of cmake (msys/cmake and mingw/cmake)
@@ -641,7 +674,7 @@ class Builder:
             fg("autoreconf", "-fiv")
 
         elif lib == 'libopenh264':
-            self.__library_data['libopenh264']['configure_opts'].extend([f"--libdir={self.release_dir}/lib",f"{self.target_dir}/openh264-{re_findall('v(.+).tar', self.__library_data['libopenh264']['download_opts'][1])[0]}"])
+            self.__library_data['libopenh264']['configure_opts'].extend([f"--libdir={self.release_dir}/lib",f"{self.target_dir}/openh264-{re_findall('libopenh264-(.+).tar', self.__library_data['libopenh264']['download_opts'][1])[0]}"])
 
         elif lib == 'libopus':
             # On Windows, there's a huge problem.
@@ -750,6 +783,12 @@ class Builder:
             if self.is_windows and self.__old_ldflags is not None:
                 local.env["LDFLAGS"] = self.__old_ldflags
 
+        elif lib == "libxvid":
+            file=path_join(self.target_dir, "xvidcore", "build", "generic" ,"Makefile")
+            start=grep(file, "ifeq ($(SHARED_EXTENSION),dll)")
+            end=grep(file, "$(LN_S) $(SHARED_LIB) $(DESTDIR)$(libdir)/$(SO_LINK)")+1
+            delete_lines(file, start, end)
+
     def __post_install(self, lib: str):
         """
         This function will executed after installing
@@ -770,17 +809,31 @@ class Builder:
             with open(f"{self.release_dir}/lib/pkgconfig/gnutls.pc", "w", encoding="utf-8") as f:
                 f.write(value.replace("Libs: -L${libdir} -lgnutls", "Libs: -L${libdir} -lgnutls -ltasn1 -lgmp -lunistring -lnettle -lhogweed"))
 
+        elif lib == "libgme":
+            #Fix static linking issue
+            with open(f"{self.release_dir}/lib/pkgconfig/libgme.pc", encoding="utf-8") as f:
+                value=f.read()
+            with open(f"{self.release_dir}/lib/pkgconfig/libgme.pc", "w", encoding="utf-8") as f:
+                f.write(value.replace("Libs.private: -lstdc++ -lz", "Libs.private: -lstdc++ -lz -lubsan -ldl -lrt"))
+
+        elif lib == "libsrt":
+            #Fix gcc_s not found
+            with open(f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/srt.pc", encoding="utf-8") as f:
+                value=f.read()
+            with open(f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/srt.pc", "w", encoding="utf-8") as f:
+                f.write(value.replace("-lgcc_s", ""))
+
         elif lib == 'libx265':
             ((local["sed"][
                 "s/-lx265/-lx265 -lstdc++/g",
                 f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc"]
             ) > f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc.tmp")()
             fg("mv", f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc.tmp", f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc")
-
-        elif lib == 'libxvid':
-            dylib_file = path_join(self.target_dir, "lib", "libxvidcore.4.dylib")
-            if is_exists(dylib_file):
-                rm(dylib_file)
+            #Fix gcc_s not found
+            with open(f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc", encoding="utf-8") as f:
+                value=f.read()
+            with open(f"{self.path_fixer(self.release_dir)}/lib/pkgconfig/x265.pc", "w", encoding="utf-8") as f:
+                f.write(value.replace("-lgcc_s", ""))
 
         elif lib == 'nettle':
             #Fix static linking issue
@@ -843,8 +896,10 @@ class Builder:
             targets: list,
             threads: Optional[int]=None,
             is_slavery_mode: bool=False,
+            is_static_ffmpeg: bool=False,
             extra_cflags: str="",
             extra_ldflags: str="",
+            extra_libs: str="",
             extra_ffmpeg_args: str="",
             **kwargs
         ) -> None:
@@ -859,10 +914,14 @@ class Builder:
             Number of threads
         is_slavery_mode: bool (default False)
             Is slavery mode
+        is_static_ffmpeg: bool (default False)
+            Is build static ffmpeg
         extra_cflags: str (default "")
             Extra CFLAGS
         extra_ldflags: str (default "")
             Extra LDFLAGS
+        extra_libs: str (default "")
+            Extra FFmpeg libs
         extra_ffmpeg_args: str (default "")
             Extra argument to ffmpeg
 
@@ -874,12 +933,14 @@ class Builder:
         extra_ldflags=f"-L{self.release_dir}/lib {extra_ldflags}"
         self.__targets=targets
         self.__is_slavery=is_slavery_mode
+        self.__is_static_ffmpeg=is_static_ffmpeg
         if threads is None:
-            from psutil import cpu_count #pylint: disable=import-outside-toplevel
             threads = cpu_count(logical=False)
             if self.is_mac:
                 self.__ffmpeg_opts.append("--enable-videotoolbox")
-        self.__ffmpeg_opts.extend(extra_ffmpeg_args.split())
+        self.__ffmpeg_opts.extend(shlex_split(extra_ffmpeg_args))
+        if extra_libs != "":
+            self.__ffmpeg_opts.append(f"--extra-libs={extra_libs}")
 
         print_header("Building process started")
         mkdirs(self.target_dir, self.release_dir)
@@ -975,7 +1036,7 @@ class Builder:
         # https://stackoverflow.com/questions/41492504/how-to-get-native-windows-path-inside-msys-python
         # TODO: implement command line option to switch between versions of CMake, protect with cpp(RELEASE_DIR)
 
-        if not fg("cmake", "-DCMAKE_BUILD_TYPE=Release", f"-DCMAKE_INSTALL_PREFIX:PATH={self.release_dir}", *args, **kwargs):
+        if not fg("cmake", "-DCMAKE_BUILD_TYPE=Release", f"-DCMAKE_INSTALL_PREFIX={self.release_dir}", f"-DCMAKE_PREFIX_PATH={self.release_dir}",*args, **kwargs):
             sys_exit(1)
         print("Making with CMake done.")
 
@@ -1006,7 +1067,7 @@ class Builder:
         print(f"Downloading {url}")
         successful_download = False
         for _ in range(DOWNLOAD_RETRY_ATTEMPTS):
-            if fg("curl", "-L", "--silent", "-o", base_path, url) is True:
+            if fg("curl", "--insecure", "-L", "--silent", "-o", base_path, url) is True:
                 successful_download = True
                 break
             print(f"Downloading failed: {url}. Retrying in {DOWNLOAD_RETRY_DELAY} seconds")
@@ -1192,16 +1253,18 @@ def main() -> None:
     parser.add_argument('--exclude-targets', action="store", dest="exclude_targets", help='Don\'t build these')
     parser.add_argument('--extra-cflags', metavar='string', dest="extra_cflags", help='Build extra CFLAGS', default="")
     parser.add_argument('--extra-ldflags', metavar='string', dest="extra_ldflags", help='Build extra LDFLAGS', default="")
+    parser.add_argument('--extra-libs', metavar='string', dest="extra_libs", help='FFmpeg extra LIBS', default="")
     parser.add_argument('--extra-ffmpeg-args', metavar='string', dest='ffmpeg_args', help='Extra FFmpeg argument', default="")
     parser.add_argument('--target-dir', metavar='dir', default="targets", help="Target directory")
     parser.add_argument('--release-dir', metavar='dir', default="release", help="Release directory")
     parser.add_argument('--disable-ffplay', dest="disable_ffplay", action='store_true', help="Disable building ffplay", default=False)
+    parser.add_argument('--static-ffmpeg', dest="static_ffmpeg", action='store_true', help="Build static ffmpeg (-static, etc)", default=False)
     parser.add_argument('--use-nonfree-libs', dest="slavery_mode", action='store_true', help="Use non-free libraries", default=False)
     parser.add_argument('--use-system-build-tools', dest="default_tools", action='store_true', help="Use cmake, nasm, yasm, pkg-config that installed on system", default=False)
     args = parser.parse_args()
 
     targets=['cmake', 'ffnvcodec', 'gmp', 'gnutls', 'libaom', 'libass', 'libbluray', 'libdav1d', 'libfdk-aac', 'libfontconfig', 'libfreetype',
-             'libfribidi', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore', 'libopenh264', 'libsdl', 'libshine', 'libsoxr', 'libsrt',
+             'libfribidi', 'libgme', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore', 'libopenh264', 'libsdl', 'libshine', 'libsoxr', 'libsrt',
              'libsvtav1', 'libtheora', 'libvidstab', 'libvmaf', 'libvorbis', 'libvpx', 'libx264', 'libx265', 'libxvid',
              'libzimg', 'nasm', 'openssl', 'pkg-config', 'yasm', 'zlib', 'ffmpeg-msys2-deps', 'ffmpeg'
             ]
@@ -1211,8 +1274,19 @@ def main() -> None:
     targets = [x for x in targets if x not in args.exclude_targets.split(",") ] if args.exclude_targets is not None else targets
     #Remove cmake, yasm, nasm, and pkg-config from targets if user dont wanna compile it
     targets = [x for x in targets if x not in ('cmake', 'pkg-config', 'nasm', 'yasm')] if args.default_tools else targets
-    #Remove libfdk-aac and openssl if not in slavery mode
-    targets = [x for x in targets if x not in ('libfdk-aac', 'openssl')] if not args.slavery_mode else targets
+    if not args.slavery_mode:
+        #Remove libfdk-aac and openssl if not in slavery mode
+        for target in ('libfdk-aac', 'openssl'):
+            try:
+                targets.remove(target)
+            except ValueError:
+                continue
+    elif args.slavery_mode:
+        #Remove gnutls if in slavery mode
+        try:
+            targets.remove('gnutls')
+        except ValueError:
+            pass
     if 'libsdl' in targets and args.disable_ffplay:
         targets.remove('libsdl')
     if not bool(command_exists("meson") and command_exists("ninja")):
@@ -1234,9 +1308,11 @@ def main() -> None:
             Builder(load(f), os_type, target_dir=args.target_dir, release_dir=args.release_dir).build(
                 targets,
                 is_slavery_mode=args.slavery_mode,
+                is_static_ffmpeg=args.static_ffmpeg,
                 silent=args.silent_mode,
                 extra_cflags=args.extra_cflags,
                 extra_ldflags=args.extra_ldflags,
+                extra_libs=args.extra_libs,
                 extra_ffmpeg_args=args.ffmpeg_args,
                 **kwargs
             )
@@ -1263,8 +1339,10 @@ if __name__ == '__main__':
 
     try:
         from plumbum import local, FG, CommandNotFound
+        from psutil import cpu_count
+        from shlex import split as shlex_split
     except ModuleNotFoundError:
-        print("Install plumbum module first")
+        print("Install required module with `pip install -r requirements.txt`")
         sys_exit(1)
 
     main()
