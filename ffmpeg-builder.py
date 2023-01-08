@@ -1,5 +1,5 @@
 #pylint: disable=invalid-name, line-too-long, missing-module-docstring
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Union
 # Set up constants
 DOWNLOAD_RETRY_DELAY = 3
 DOWNLOAD_RETRY_ATTEMPTS = 3
@@ -8,20 +8,52 @@ DOWNLOAD_RETRY_ATTEMPTS = 3
 BOLD_SEPARATOR = "======================================="
 ITALIC_SEPARATOR = "---------------------------------------"
 
-def grep(filename: str, text: str):
-    with open(filename) as file:
+def findText(filePath: str, text: str) -> Union[None, int]:
+    """
+    Find text in file
+
+    Parameters
+    ----------
+    filePath: str
+        File path in string
+    text: str
+        Text that you wanna find
+
+    Returns
+    -------
+    Return either None or int
+    """
+    with open(filePath) as file:
         for index, value in enumerate(file.readlines()):
             if text == value.strip():
                 file.close()
                 return index
 
-def delete_lines(filename: str, start: int, end: int):
-    with open(filename) as fRead:
+def delete_lines(filePath: str, start: int, end: int) -> None:
+    """
+    Function to delete lines in the file from specific
+    start and specific end
+
+    Parameters
+    ----------
+    filePath: str
+        File path in string
+    start: int
+        Start line
+    end: int
+        Stop line
+
+    Returns
+    -------
+    None
+    """
+    with open(filePath) as fRead:
         file_read=fRead.readlines()
-        with open(filename, "w") as fWrite:
-            for index, value in enumerate(file_read):
-                if index < start or index > end:
-                    fWrite.write(value)
+        fRead.close()
+    with open(filePath, "w") as fWrite:
+        for index, value in enumerate(file_read):
+            if index < start or index > end:
+                fWrite.write(value)
         fWrite.close()
 
 def lookahead(iterable: Iterable):
@@ -148,11 +180,7 @@ def add_path(dir_name: str, take_priority: bool=True) -> None:
     None
     """
     old_path = local.env["PATH"]
-    if take_priority:
-        new_path = f"{dir_name}:{old_path}"
-    else:
-        new_path = f"{old_path}:{dir_name}"
-    local.env["PATH"] = new_path
+    local.env["PATH"] = f"{dir_name}:{old_path}" if take_priority else f"{old_path}:{dir_name}"
 
 def mkdir(*dir_tree) -> None:
     """
@@ -586,17 +614,11 @@ class Builder:
         -------
         None
         """
-        if lib == "libaom":
-            mkdir(self.target_dir, self.__library_data['libaom']['folder_name'])
+        if lib in ["libaom", "libdav1d", "libopenh264"]:
+            mkdir(self.target_dir, self.__library_data[lib]['folder_name'])
 
-        elif lib == 'libopenh264':
-            mkdir(self.target_dir, self.__library_data['libopenh264']['folder_name'])
-
-        elif lib == 'libdav1d':
-            mkdir(self.target_dir, self.__library_data['libdav1d']['folder_name'])
-
-        elif lib == 'libgme':
-            mkdir(self.target_dir, *self.__library_data['libgme']['folder_name'])
+        elif lib in ["libgme", "libopenjpeg"]:
+            mkdir(self.target_dir, *self.__library_data[lib]['folder_name'])
 
     def __pre_configure(self, lib: str) -> None:
         """
@@ -785,8 +807,8 @@ class Builder:
 
         elif lib == "libxvid":
             file=path_join(self.target_dir, "xvidcore", "build", "generic" ,"Makefile")
-            start=grep(file, "ifeq ($(SHARED_EXTENSION),dll)")
-            end=grep(file, "$(LN_S) $(SHARED_LIB) $(DESTDIR)$(libdir)/$(SO_LINK)")+1
+            start=findText(file, "ifeq ($(SHARED_EXTENSION),dll)")
+            end=findText(file, "$(LN_S) $(SHARED_LIB) $(DESTDIR)$(libdir)/$(SO_LINK)")+1
             delete_lines(file, start, end)
 
     def __post_install(self, lib: str):
@@ -1061,7 +1083,7 @@ class Builder:
 
         base_path = path_join(download_path, dest_name)
         if is_exists(base_path):
-            print(f"Used from local cache: {url}")
+            print(f"Source file already downloaded: {url}")
             return
 
         print(f"Downloading {url}")
@@ -1264,7 +1286,7 @@ def main() -> None:
     args = parser.parse_args()
 
     targets=['cmake', 'ffnvcodec', 'gmp', 'gnutls', 'libaom', 'libass', 'libbluray', 'libdav1d', 'libfdk-aac', 'libfontconfig', 'libfreetype',
-             'libfribidi', 'libgme', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore', 'libopenh264', 'libsdl', 'libshine', 'libsoxr', 'libsrt',
+             'libfribidi', 'libgme', 'libkvazaar', 'libmp3lame', 'libogg', 'libopus', 'libopencore', 'libopenh264', 'libopenjpeg', 'libsdl', 'libshine', 'libsoxr', 'libsrt',
              'libsvtav1', 'libtheora', 'libvidstab', 'libvmaf', 'libvorbis', 'libvpx', 'libx264', 'libx265', 'libxvid',
              'libzimg', 'nasm', 'openssl', 'pkg-config', 'yasm', 'zlib', 'ffmpeg-msys2-deps', 'ffmpeg'
             ]
