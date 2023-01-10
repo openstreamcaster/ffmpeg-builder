@@ -144,6 +144,13 @@
             "libopenh264-2.3.1.tar.gz"],
         "folder_name": "openh264_build"
     },
+    "libopenjpeg":{
+        "configuration": "cmake",
+        "configure_opts": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_THIRDPARTY=ON", "-DBUILD_SHARED_LIBS=off", ".."],
+        "download_opts": ["https://github.com/uclouvain/openjpeg/archive/refs/tags/v2.5.0.tar.gz",
+            "libopenjpeg-2.5.0.tar.gz"],
+        "folder_name": ["openjpeg-2.5.0", "build"]
+    },
     "libopus":{
         "configure_opts": ["--disable-shared", "--enable-static"],
         "download_opts": ["https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz",
