@@ -19,9 +19,9 @@
             "--enable-avfilter",
             "--enable-filters"
             ],
-        "download_opts": ["https://ffmpeg.org/releases/ffmpeg-5.1.1.tar.xz",
-             "ffmpeg-5.1.1.tar.xz"],
-        "folder_name": "ffmpeg-5.1.1"
+        "download_opts": ["https://ffmpeg.org/releases/ffmpeg-6.0.tar.xz",
+             "ffmpeg-6.0.tar.xz"],
+        "folder_name": "ffmpeg-6.0"
     },
     "ffmpeg-msys2-deps":{
         "download_opts": ["https://codeload.github.com/olegchir/ffmpeg-windows-deps/zip/master",
